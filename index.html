@@ -681,13 +681,13 @@
             <ol style="margin-left: 1.1rem; font-size: 0.9rem; color: #363636;">
               <li>Demonstration data collection via SEAL teleoperation — legal serve state-action pairs recorded as (ref_pos, ref_euler, landing_xy, error) → (delta_pos, delta_euler)</li>
               <li>Behavior Cloning (BC): MLP (160 → 300 → 300 → 80) trained on state-action pairs via supervised regression</li>
-              <li>Weight transfer: BC actor weights loaded into the PPO actor network</li>
+              <li>Weight transfer: BC actor weights loaded into the PPO actor as a <strong>one-time warm start</strong> — no BC loss is used during PPO training</li>
               <li>Critic warm-up (~1,000 steps): actor frozen, only critic trained to establish a stable value baseline</li>
-              <li>PPO fine-tuning: actor unfrozen, full PPO update loop proceeds</li>
+              <li>PPO fine-tuning: actor unfrozen, standard PPO update loop proceeds freely</li>
             </ol>
             <p style="font-size: 0.85rem; color: #7a7a7a; margin-top: 0.75rem;">
-              Policy initialized from human demonstration data. PPO fine-tunes on top of the
-              pre-trained behavior, leveraging the BC prior to skip the blind exploration phase entirely.
+              BC provides <em>policy initialization only</em> — a warm start that skips blind
+              exploration. PPO then fine-tunes freely with no BC regularization term.
             </p>
           </div>
         </div>
@@ -727,13 +727,38 @@
           <img src="static/images/training_pipeline.jpg"
                alt="Strategy A pipeline: Demonstration Data → Behavior Cloning (MLP 160→300→300→80) → Weight Transfer → Critic Warm-up → PPO Fine-tuning → Final Serving Policy"
                loading="lazy"
-               style="max-width: 420px; margin: 0 auto; display: block; border-radius: 4px;">
+               style="max-width: 720px; width: 100%; margin: 0 auto; display: block; border-radius: 4px;">
         </figure>
         <p class="is-size-6 has-text-grey" style="margin-top: 0.5rem;">
-          Figure 4: Detailed pipeline for Strategy A — Behavior Cloning pre-training
-          on SEAL teleoperation data, weight transfer to the PPO actor, critic warm-up,
-          and PPO fine-tuning in Isaac Sim.
+          Figure 4: Detailed pipeline for Strategy A — SEAL teleoperation data →
+          Behavior Cloning pre-training → weight transfer to PPO actor →
+          critic warm-up → PPO fine-tuning in Isaac Sim.
         </p>
+        <!-- Diagram label clarification -->
+        <div style="
+          display: inline-block;
+          margin-top: 0.75rem;
+          padding: 0.65rem 1rem;
+          background: #fffbe6;
+          border: 1px solid #ffe58f;
+          border-radius: 6px;
+          text-align: left;
+          max-width: 680px;
+        ">
+          <p class="is-size-7" style="margin: 0 0 0.3rem; font-weight: 600; color: #856404;">
+            ⚠ Note on diagram labels
+          </p>
+          <p class="is-size-7" style="margin: 0 0 0.25rem; color: #555;">
+            <strong>"Behavior Cloning as Policy Initialization"</strong> —
+            BC weights provide a one-time warm start; no BC loss is added during PPO training.
+            PPO fine-tunes the actor freely thereafter.
+          </p>
+          <p class="is-size-7" style="margin: 0; color: #555;">
+            <strong>"Byproduct"</strong> —
+            PPO continuously collects new on-policy rollouts, replacing the static BC dataset
+            with live interaction data.
+          </p>
+        </div>
       </div>
 
       <div class="content has-text-justified" style="margin-top: 1.25rem;">
