@@ -208,6 +208,44 @@
   <!-- End Abstract -->
 
 
+  <!-- ===== Simulation Environment ===== -->
+  <section class="section">
+    <div class="container is-max-desktop">
+      <h2 class="title is-3 has-text-centered">Simulation Environment</h2>
+      <div class="content has-text-justified">
+        <p>
+          All experiments are conducted in <strong>NVIDIA Isaac Sim</strong>, a physics-based
+          robotics simulation platform. The environment is designed to comply with
+          <strong>ITTF (International Table Tennis Federation)</strong> standards: the table
+          dimensions, net height, and ball properties follow the official specifications to
+          ensure that any learned serving behavior is grounded in realistic physical conditions.
+        </p>
+        <p>
+          The robot arm used is a <strong>Universal Robots UR10</strong>, a 6-DOF industrial
+          manipulator equipped with a table tennis paddle as the end-effector.
+          The UR10 is mounted at one end of the table and is tasked with generating a full
+          serving motion — swinging the paddle to strike the ball and direct it onto the
+          opposite side of the table. The coordinate frame is aligned with the table surface,
+          with the X/Y axes along the table plane and Z pointing upward.
+        </p>
+      </div>
+      <div class="has-text-centered" style="margin-top: 1.5rem;">
+        <figure class="image">
+          <img src="static/images/isaac_env.png"
+               alt="Isaac Sim environment showing a UR10 robot arm with paddle end-effector positioned beside an ITTF-standard table tennis table"
+               loading="lazy"
+               style="max-width: 720px; margin: 0 auto; display: block; border-radius: 6px;">
+        </figure>
+        <p class="is-size-6 has-text-grey" style="margin-top: 0.5rem;">
+          Figure 1: Isaac Sim simulation environment — UR10 robot with end-effector paddle
+          and ITTF-standard table tennis table.
+        </p>
+      </div>
+    </div>
+  </section>
+  <!-- End Simulation Environment -->
+
+
   <!-- ===== Method Overview ===== -->
   <section class="section">
     <div class="container is-max-desktop">
@@ -282,7 +320,7 @@
         <div class="column is-half has-text-centered">
           <video controls muted loop preload="metadata"
                  style="width: 100%; border-radius: 6px;">
-            <source src="static/SEAL/seal.mp4" type="video/mp4">
+            <source src="static/videos/seal.mp4" type="video/mp4">
             Your browser does not support the video tag.
           </video>
           <p class="is-size-6 has-text-grey" style="margin-top: 0.4rem;">
@@ -292,7 +330,7 @@
         <div class="column is-half has-text-centered">
           <video controls muted loop preload="metadata"
                  style="width: 100%; border-radius: 6px;">
-            <source src="static/SEAL/ee_teleop.mp4" type="video/mp4">
+            <source src="static/videos/ee_teleop.mp4" type="video/mp4">
             Your browser does not support the video tag.
           </video>
           <p class="is-size-6 has-text-grey" style="margin-top: 0.4rem;">
@@ -367,15 +405,23 @@
         </p>
       </div>
       <div class="has-text-centered" style="margin-top: 1.5rem;">
-        <figure class="image">
-          <img src="static/images/isaac_env.png"
-               alt="Isaac Sim environment: UR10 robot arm with paddle (end-effector) facing an ITTF-standard table tennis table"
-               loading="lazy"
-               style="max-width: 720px; margin: 0 auto; display: block; border-radius: 6px;">
-        </figure>
+        <div style="
+          background: #f5f5f5;
+          border: 2px dashed #b5b5b5;
+          border-radius: 8px;
+          padding: 2.5rem 2rem;
+          color: #7a7a7a;
+          max-width: 720px;
+          margin: 0 auto;
+        ">
+          <span class="icon is-large" style="margin-bottom: 0.5rem; display: block;">
+            <i class="fas fa-image fa-2x"></i>
+          </span>
+          <p class="is-size-6">Figure will be added later — system architecture diagram
+            (RL agent ↔ physics simulator ↔ joint controller).</p>
+        </div>
         <p class="is-size-6 has-text-grey" style="margin-top: 0.5rem;">
-          Figure 1: Isaac Sim simulation environment — UR10 robot arm with end-effector paddle
-          and ITTF-standard table tennis table.
+          Figure 2: System architecture overview.
         </p>
       </div>
     </div>
