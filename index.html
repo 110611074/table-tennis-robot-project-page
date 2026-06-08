@@ -397,57 +397,61 @@
         <h3 class="title is-5" style="margin-bottom: 0.4rem;">Algorithm — PPO</h3>
         <p>
           We use <strong>Proximal Policy Optimization (PPO)</strong> as the core RL algorithm.
-          PPO is an on-policy actor-critic method that constrains each gradient update via a
-          clipped surrogate objective, preventing destructively large policy changes while still
-          making consistent progress. Both the actor and critic are implemented as multi-layer
-          perceptrons (MLPs). The actor outputs the mean and log-standard deviation of a Gaussian
-          distribution over the action space; the critic estimates state value for generalized
-          advantage estimation (GAE).
+          PPO is an on-policy actor-critic method whose clipped surrogate objective limits the
+          size of each policy gradient update, helping to avoid large destabilizing parameter
+          changes. Both the actor and critic are implemented as multi-layer perceptrons (MLPs).
+          The actor outputs the mean and log-standard deviation of a Gaussian distribution
+          over the action space, enabling stochastic exploration during training.
+          The critic estimates the state value used to compute generalized advantage
+          estimates (GAE) for variance reduction.
         </p>
 
         <h3 class="title is-5" style="margin-top: 1.2rem; margin-bottom: 0.4rem;">State Space</h3>
         <p>
-          At each control step, the agent observes a 10-dimensional state vector composed of:
+          At each control step the agent observes a <strong>10-dimensional state vector</strong>:
         </p>
         <ul>
-          <li><strong>UR10 joint angles</strong> — 6D (one per joint)</li>
-          <li><strong>Ball position</strong> in the table frame — 3D (x, y, z)</li>
-          <li><strong>Ball velocity magnitude</strong> — 1D</li>
+          <li><strong>UR10 joint angles</strong> — 6D, one value per joint</li>
+          <li><strong>Ball position</strong> in the table coordinate frame — 3D (x, y, z)</li>
+          <li><strong>Ball velocity magnitude</strong> — 1D scalar</li>
         </ul>
         <p>
-          All observations are normalized before being fed into the policy network.
+          Each dimension is normalized independently before being passed to the policy network.
         </p>
 
         <h3 class="title is-5" style="margin-top: 1.2rem; margin-bottom: 0.4rem;">Action Space</h3>
         <p>
-          The policy outputs a 6-dimensional continuous action vector of target joint velocities
-          for each UR10 joint. Actions are clipped to safe operating ranges by the low-level
-          controller before execution.
+          The policy outputs a <strong>6-dimensional continuous action vector</strong> of
+          target joint velocities, one per UR10 joint.
+          The action space is bounded to the joint's safe operating range.
         </p>
 
         <h3 class="title is-5" style="margin-top: 1.2rem; margin-bottom: 0.4rem;">Reward Function</h3>
         <p>
-          The reward signal combines three terms designed to guide the agent toward a successful serve:
+          The total reward at each timestep combines three terms:
         </p>
         <ul>
           <li>
-            <strong>Contact reward:</strong> a positive bonus when the paddle successfully
-            makes contact with the ball, encouraging the agent to swing toward the ball.
+            <strong>Approach reward:</strong> a dense shaping term proportional to the
+            reduction in Euclidean distance between the paddle and the ball.
+            This provides continuous feedback throughout each episode and is particularly
+            important in the early stages of training when ball contact is infrequent.
           </li>
           <li>
-            <strong>Trajectory reward:</strong> a shaping term that decreases the distance
-            between the paddle and the ball, providing dense feedback during early exploration
-            when contact events are rare.
+            <strong>Contact reward:</strong> a sparse bonus awarded when the paddle
+            makes physical contact with the ball, directly reinforcing the swing motion.
           </li>
           <li>
-            <strong>Landing reward:</strong> a positive bonus when the ball lands on the
-            target half of the opposite side of the table, directly encoding the serving objective.
+            <strong>Landing reward:</strong> a sparse bonus awarded when the ball lands
+            on the target half of the opposite side of the table, encoding the primary
+            serving objective.
           </li>
         </ul>
         <p>
-          Sparse rewards alone proved insufficient during early experiments; the dense trajectory
-          shaping term was critical for obtaining reliable ball contact within a reasonable
-          training budget.
+          In our setup, relying on contact and landing rewards alone did not produce
+          reliable ball contact within the available training budget.
+          The dense approach reward was necessary to guide exploration toward the ball
+          in early training.
         </p>
 
       </div>
@@ -624,7 +628,7 @@
       <!-- Pipeline diagram for Strategy B -->
       <div class="has-text-centered" style="margin-top: 1.75rem;">
         <figure class="image">
-          <img src="static/images/training_pipeline.png"
+          <img src="static/images/training_pipeline.jpg"
                alt="Strategy B pipeline: Demonstration Data → Behavior Cloning (MLP 10D→6D) → Weight Transfer → PPO Fine-tuning → Final Serving Policy"
                loading="lazy"
                style="max-width: 420px; margin: 0 auto; display: block; border-radius: 4px;">
