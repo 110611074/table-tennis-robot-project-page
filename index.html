@@ -65,6 +65,12 @@
 
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
+  <!-- MathJax for math rendering -->
+  <script>
+    MathJax = { tex: { inlineMath: [['\\(','\\)'], ['$','$']], displayMath: [['\\[','\\]'], ['$$','$$']] } };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" id="MathJax-script"></script>
+
   <script defer src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
   <script defer src="static/js/fontawesome.all.min.js"></script>
   <script defer src="static/js/bulma-carousel.min.js"></script>
@@ -394,65 +400,136 @@
       <h2 class="title is-3 has-text-centered">Reinforcement Learning Framework</h2>
       <div class="content has-text-justified">
 
-        <h3 class="title is-5" style="margin-bottom: 0.4rem;">Algorithm — PPO</h3>
+        <h3 class="title is-5" style="margin-bottom: 0.4rem;">Algorithm — PPO with BC Initialization</h3>
         <p>
           We use <strong>Proximal Policy Optimization (PPO)</strong> as the core RL algorithm.
           PPO is an on-policy actor-critic method whose clipped surrogate objective limits the
           size of each policy gradient update, helping to avoid large destabilizing parameter
-          changes. Both the actor and critic are implemented as multi-layer perceptrons (MLPs).
+          changes. Both the actor and critic are implemented as multi-layer perceptrons (MLPs)
+          with architecture <strong>160 → 300 → 300 → 80</strong>.
           The actor outputs the mean and log-standard deviation of a Gaussian distribution
-          over the action space, enabling stochastic exploration during training.
+          over the action space (with <code>log_std_init = −2.0</code> to keep initial actions
+          well within bounds), enabling stochastic exploration during training.
           The critic estimates the state value used to compute generalized advantage
           estimates (GAE) for variance reduction.
         </p>
+        <p>
+          To avoid the cold-start problem of learning from scratch, the actor is initialized
+          from a pre-trained <strong>Behavior Cloning (BC)</strong> checkpoint. During the
+          first <strong>1,000 environment steps</strong>, the actor is frozen while only the
+          critic is updated, allowing the value baseline to warm up before policy gradients begin.
+        </p>
 
-        <h3 class="title is-5" style="margin-top: 1.2rem; margin-bottom: 0.4rem;">State Space</h3>
+        <h3 class="title is-5" style="margin-top: 1.4rem; margin-bottom: 0.4rem;">State Space</h3>
         <p>
           At each control step the agent observes a <strong>10-dimensional state vector</strong>:
         </p>
-        <ul>
-          <li><strong>UR10 joint angles</strong> — 6D, one value per joint</li>
-          <li><strong>Ball position</strong> in the table coordinate frame — 3D (x, y, z)</li>
-          <li><strong>Ball velocity magnitude</strong> — 1D scalar</li>
-        </ul>
+
+        <!-- State space table -->
+        <div class="table-container" style="margin-top: 0.75rem; margin-bottom: 0.75rem;">
+          <table class="table is-bordered is-striped is-hoverable is-fullwidth is-size-6">
+            <thead>
+              <tr>
+                <th style="width: 14%;">Dimensions</th>
+                <th style="width: 22%;">Feature</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>[0:3]</code></td>
+                <td><code>ref_pos</code></td>
+                <td>Current paddle face position (x, y, z) in metres</td>
+              </tr>
+              <tr>
+                <td><code>[3:6]</code></td>
+                <td><code>ref_euler</code></td>
+                <td>Current paddle face orientation as Euler angles (roll, pitch, yaw) in radians</td>
+              </tr>
+              <tr>
+                <td><code>[6:8]</code></td>
+                <td><code>landing_xy</code></td>
+                <td>Most recent ball landing position on the table (x, y)</td>
+              </tr>
+              <tr>
+                <td><code>[8:10]</code></td>
+                <td><code>target − landing</code></td>
+                <td>2D error vector from last landing to the target landing point</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
         <p>
-          Each dimension is normalized independently before being passed to the policy network.
+          Internally, orientation is maintained and composed as quaternions to avoid gimbal lock;
+          the Euler representation is used only for the observation.
         </p>
 
-        <h3 class="title is-5" style="margin-top: 1.2rem; margin-bottom: 0.4rem;">Action Space</h3>
+        <h3 class="title is-5" style="margin-top: 1.4rem; margin-bottom: 0.4rem;">Action Space</h3>
         <p>
-          The policy outputs a <strong>6-dimensional continuous action vector</strong> of
-          target joint velocities, one per UR10 joint.
-          The action space is bounded to the joint's safe operating range.
+          The policy outputs a <strong>6-dimensional continuous action vector</strong> representing
+          a residual correction to the current paddle pose:
         </p>
 
-        <h3 class="title is-5" style="margin-top: 1.2rem; margin-bottom: 0.4rem;">Reward Function</h3>
+        <!-- Action space table -->
+        <div class="table-container" style="margin-top: 0.75rem; margin-bottom: 0.75rem;">
+          <table class="table is-bordered is-striped is-hoverable is-fullwidth is-size-6">
+            <thead>
+              <tr>
+                <th style="width: 14%;">Dimensions</th>
+                <th style="width: 22%;">Feature</th>
+                <th>Physical bound</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>[0:3]</code></td>
+                <td><code>delta_pos</code></td>
+                <td>Position offset ±0.05 m per axis</td>
+              </tr>
+              <tr>
+                <td><code>[3:6]</code></td>
+                <td><code>delta_euler</code></td>
+                <td>Euler angle offset ±[0.18, 0.22, 0.30] rad (roll, pitch, yaw)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
         <p>
-          The total reward at each timestep combines three terms:
+          Actions are output in a normalized [−1, +1] range and rescaled to physical units
+          inside the environment. The resulting orientation delta is applied via
+          <strong>quaternion multiplication</strong> onto the current reference quaternion,
+          then converted back to Euler angles before being passed to the IK solver.
+        </p>
+
+        <h3 class="title is-5" style="margin-top: 1.4rem; margin-bottom: 0.4rem;">Reward Function</h3>
+        <p>
+          Each episode consists of up to <strong>5 sub-steps</strong> targeting the same landing
+          point, allowing the policy to iteratively refine its serve.
+          The reward at each sub-step is:
+        </p>
+        <p style="text-align: center; font-size: 1.05rem; margin: 0.8rem 0;">
+          \(r = r_{\text{status}} + r_{\text{action}}\)
         </p>
         <ul>
           <li>
-            <strong>Approach reward:</strong> a dense shaping term proportional to the
-            reduction in Euclidean distance between the paddle and the ball.
-            This provides continuous feedback throughout each episode and is particularly
-            important in the early stages of training when ball contact is infrequent.
+            <strong>Legal serve reward (dense):</strong> when the ball lands legally on the
+            opponent's half,
+            \(r_{\text{status}} = 2 - \lVert\text{landing} - \text{target}\rVert_2\).
+            This provides a continuous signal proportional to landing accuracy.
           </li>
           <li>
-            <strong>Contact reward:</strong> a sparse bonus awarded when the paddle
-            makes physical contact with the ball, directly reinforcing the swing motion.
+            <strong>Illegal penalty (sparse):</strong>
+            \(r_{\text{status}} = -5.0 \times f\), where \(f = 1.2\) for a complete miss
+            and \(f = 0.05\) for insufficient bounces or indeterminate outcomes.
           </li>
           <li>
-            <strong>Landing reward:</strong> a sparse bonus awarded when the ball lands
-            on the target half of the opposite side of the table, encoding the primary
-            serving objective.
+            <strong>Action regularization (optional):</strong>
+            \(r_{\text{action}} = -w \cdot \lVert a \rVert^2\), penalizing large residual
+            corrections to discourage unnecessary pose drift.
           </li>
         </ul>
-        <p>
-          In our setup, relying on contact and landing rewards alone did not produce
-          reliable ball contact within the available training budget.
-          The dense approach reward was necessary to guide exploration toward the ball
-          in early training.
-        </p>
 
       </div>
     </div>
