@@ -545,89 +545,97 @@
         <p>
           The system follows a closed-loop data-flow architecture with three main components:
           the <strong>Isaac Sim environment</strong>, the <strong>policy network</strong>, and
-          the <strong>joint controller</strong>.
+          the <strong>pose controller</strong>.
         </p>
       </div>
 
-      <!-- Data flow diagram rendered in HTML -->
-      <div style="max-width: 680px; margin: 1.5rem auto 0;">
+      <!-- Vertical data-flow diagram -->
+      <div style="max-width: 420px; margin: 1.5rem auto 0;">
 
-        <!-- Row of boxes -->
-        <div style="display: flex; align-items: stretch; gap: 0; justify-content: center; flex-wrap: wrap;">
-
-          <!-- Box 1: Isaac Sim -->
-          <div style="
-            flex: 1; min-width: 150px; max-width: 200px;
-            border: 2px solid #363636; border-radius: 8px;
-            padding: 1rem 0.75rem; text-align: center;
-            background: #fff;
-          ">
-            <p style="font-weight: 700; margin-bottom: 0.4rem;">Isaac Sim</p>
-            <p class="is-size-7 has-text-grey">Physics simulator<br>Ball + robot dynamics</p>
-          </div>
-
-          <!-- Arrow right -->
-          <div style="display:flex; align-items:center; padding: 0 0.5rem; font-size: 1.4rem; color: #363636;">→</div>
-
-          <!-- Box 2: Observation -->
-          <div style="
-            flex: 1; min-width: 150px; max-width: 200px;
-            border: 2px solid #3273dc; border-radius: 8px;
-            padding: 1rem 0.75rem; text-align: center;
-            background: #eff5fb;
-          ">
-            <p style="font-weight: 700; margin-bottom: 0.4rem;">Observation</p>
-            <p class="is-size-7 has-text-grey">Joint angles (6D)<br>Ball pos (3D) + vel (1D)</p>
-          </div>
-
-          <!-- Arrow right -->
-          <div style="display:flex; align-items:center; padding: 0 0.5rem; font-size: 1.4rem; color: #363636;">→</div>
-
-          <!-- Box 3: Policy (PPO) -->
-          <div style="
-            flex: 1; min-width: 150px; max-width: 200px;
-            border: 2px solid #23d160; border-radius: 8px;
-            padding: 1rem 0.75rem; text-align: center;
-            background: #effbf4;
-          ">
-            <p style="font-weight: 700; margin-bottom: 0.4rem;">Policy (MLP)</p>
-            <p class="is-size-7 has-text-grey">PPO actor–critic<br>Outputs action (6D)</p>
-          </div>
-
-          <!-- Arrow right -->
-          <div style="display:flex; align-items:center; padding: 0 0.5rem; font-size: 1.4rem; color: #363636;">→</div>
-
-          <!-- Box 4: Joint Controller -->
-          <div style="
-            flex: 1; min-width: 150px; max-width: 200px;
-            border: 2px solid #ff3860; border-radius: 8px;
-            padding: 1rem 0.75rem; text-align: center;
-            background: #fff0f3;
-          ">
-            <p style="font-weight: 700; margin-bottom: 0.4rem;">Joint Controller</p>
-            <p class="is-size-7 has-text-grey">Clip &amp; scale action<br>Send to UR10 joints</p>
-          </div>
-
+        <!-- Box 1: Isaac Sim -->
+        <div style="
+          border: 2px solid #363636; border-radius: 8px;
+          padding: 0.9rem 1rem; text-align: center;
+          background: #fff;
+        ">
+          <p style="font-weight: 700; margin-bottom: 0.25rem;">Isaac Sim</p>
+          <p class="is-size-7 has-text-grey" style="margin: 0;">Physics simulator &nbsp;·&nbsp; Ball + robot dynamics</p>
         </div>
 
-        <!-- Feedback arrow label -->
-        <div style="text-align: center; margin-top: 0.6rem; color: #7a7a7a; font-size: 0.8rem;">
-          ↑ Reward &amp; next state fed back to PPO update loop ↑
+        <!-- Arrow down -->
+        <div style="text-align: center; font-size: 1.4rem; color: #363636; line-height: 1.6;">↓</div>
+
+        <!-- Box 2: Observation -->
+        <div style="
+          border: 2px solid #3273dc; border-radius: 8px;
+          padding: 0.9rem 1rem; text-align: center;
+          background: #eff5fb;
+        ">
+          <p style="font-weight: 700; margin-bottom: 0.25rem;">Observation (10D)</p>
+          <p class="is-size-7 has-text-grey" style="margin: 0;">
+            ref_pos (3D) &nbsp;+&nbsp; ref_euler (3D)<br>
+            landing_xy (2D) &nbsp;+&nbsp; error (2D)
+          </p>
+        </div>
+
+        <!-- Arrow down -->
+        <div style="text-align: center; font-size: 1.4rem; color: #363636; line-height: 1.6;">↓</div>
+
+        <!-- Box 3: Policy -->
+        <div style="
+          border: 2px solid #23d160; border-radius: 8px;
+          padding: 0.9rem 1rem; text-align: center;
+          background: #effbf4;
+        ">
+          <p style="font-weight: 700; margin-bottom: 0.25rem;">Policy (MLP)</p>
+          <p class="is-size-7 has-text-grey" style="margin: 0;">
+            PPO actor–critic<br>
+            Outputs delta action (6D)
+          </p>
+        </div>
+
+        <!-- Arrow down -->
+        <div style="text-align: center; font-size: 1.4rem; color: #363636; line-height: 1.6;">↓</div>
+
+        <!-- Box 4: Pose Controller -->
+        <div style="
+          border: 2px solid #ff3860; border-radius: 8px;
+          padding: 0.9rem 1rem; text-align: center;
+          background: #fff0f3;
+        ">
+          <p style="font-weight: 700; margin-bottom: 0.25rem;">Pose Controller</p>
+          <p class="is-size-7 has-text-grey" style="margin: 0;">
+            Rescale [−1, +1] → physical units<br>
+            pos += delta_pos &nbsp;·&nbsp; quat ⊗ delta_quat → euler<br>
+            Send to Lula IK solver
+          </p>
+        </div>
+
+        <!-- Feedback label -->
+        <div style="text-align: center; margin-top: 0.7rem; color: #7a7a7a; font-size: 0.82rem;">
+          ↑ &nbsp;Reward &amp; next state fed back to PPO update loop&nbsp; ↑
         </div>
 
         <p class="is-size-6 has-text-grey has-text-centered" style="margin-top: 0.75rem;">
-          Figure 2: Data flow — Isaac Sim → observation → PPO policy → joint controller → Isaac Sim.
+          Figure 2: Data flow — Isaac Sim → observation → PPO policy → pose controller → Isaac Sim.
         </p>
       </div>
 
-      <div class="content has-text-justified" style="margin-top: 1.5rem;">
+      <div class="content has-text-justified" style="margin-top: 1.75rem;">
         <p>
-          At each timestep, Isaac Sim provides the normalized observation to the policy network.
-          The actor MLP outputs a 6-dimensional action (target joint velocities) which is clipped
-          to safe ranges and forwarded to the UR10 joint controller. After execution, Isaac Sim
-          steps forward, computes the reward, and returns the next observation. Collected
-          transitions are stored in a rollout buffer; once a fixed number of steps is reached,
-          PPO performs several epochs of mini-batch gradient descent before the next rollout begins.
+          At each sub-step, Isaac Sim provides the current paddle pose and last ball landing
+          position as a <strong>10-dimensional observation</strong> to the policy network.
+          The actor MLP outputs a 6-dimensional normalized residual action — a position offset
+          and an Euler angle offset — which is rescaled to physical units and composed onto the
+          current reference pose via <strong>quaternion multiplication</strong>.
+          The resulting absolute pose is forwarded to the <strong>Lula inverse kinematics
+          solver</strong> to drive the UR10 arm.
+          After execution, Isaac Sim steps forward, computes the reward, and returns the next
+          observation. Each episode consists of up to <strong>5 such sub-steps</strong> targeting
+          the same landing point, allowing the policy to iteratively refine its serve.
+          Collected transitions are stored in a rollout buffer; once
+          <code>n_steps × num_envs</code> steps are reached, PPO performs several epochs of
+          mini-batch gradient descent before the next rollout begins.
         </p>
       </div>
 
@@ -643,39 +651,15 @@
       <div class="content has-text-justified">
         <p>
           To investigate the role of prior knowledge in RL-based serving, we design and compare
-          <strong>two training strategies</strong> that share the same PPO loop and reward
-          function but differ in how the policy is initialized.
+          <strong>two training strategies</strong> that share the same PPO loop, state space,
+          action space, and reward function, but differ in how the policy is initialized.
         </p>
       </div>
 
       <!-- Two-column strategy comparison -->
       <div class="columns is-centered" style="margin-top: 1.2rem;">
 
-        <!-- Strategy A: Scratch -->
-        <div class="column is-half">
-          <div style="
-            border: 2px solid #ff9f43;
-            border-radius: 10px;
-            padding: 1.25rem 1rem;
-            background: #fffbf5;
-            height: 100%;
-          ">
-            <p style="font-weight: 700; font-size: 1rem; margin-bottom: 0.6rem; color: #e67e22;">
-              Strategy A — RL from Scratch
-            </p>
-            <ol style="margin-left: 1.1rem; font-size: 0.9rem; color: #363636;">
-              <li>Random policy initialization</li>
-              <li>PPO rollout collection in Isaac Sim</li>
-              <li>Reward: contact + trajectory + landing</li>
-              <li>Repeat until convergence (~16k steps)</li>
-            </ol>
-            <p style="font-size: 0.85rem; color: #7a7a7a; margin-top: 0.75rem;">
-              No prior knowledge. Policy must discover serving motion from scratch via exploration alone.
-            </p>
-          </div>
-        </div>
-
-        <!-- Strategy B: SL + PPO -->
+        <!-- Strategy A: BC → PPO -->
         <div class="column is-half">
           <div style="
             border: 2px solid #3273dc;
@@ -685,45 +669,76 @@
             height: 100%;
           ">
             <p style="font-weight: 700; font-size: 1rem; margin-bottom: 0.6rem; color: #2563eb;">
-              Strategy B — RL after Supervised Learning
+              Strategy A — RL after Supervised Learning (BC → PPO)
             </p>
             <ol style="margin-left: 1.1rem; font-size: 0.9rem; color: #363636;">
-              <li>Teleoperation data collection (SEAL)</li>
-              <li>Behavior Cloning: MLP trained on state-action pairs</li>
-              <li>Transfer BC weights to PPO actor</li>
-              <li>Freeze weights → warm-up phase (~3k steps)</li>
-              <li>Unfreeze → PPO fine-tuning in Isaac Sim</li>
+              <li>Demonstration data collection via SEAL teleoperation — legal serve state-action pairs recorded as (ref_pos, ref_euler, landing_xy, error) → (delta_pos, delta_euler)</li>
+              <li>Behavior Cloning (BC): MLP (160 → 300 → 300 → 80) trained on state-action pairs via supervised regression</li>
+              <li>Weight transfer: BC actor weights loaded into the PPO actor network</li>
+              <li>Critic warm-up (~1,000 steps): actor frozen, only critic trained to establish a stable value baseline</li>
+              <li>PPO fine-tuning: actor unfrozen, full PPO update loop proceeds</li>
             </ol>
             <p style="font-size: 0.85rem; color: #7a7a7a; margin-top: 0.75rem;">
-              Policy initialized from human demonstration. PPO fine-tunes on top of the pre-trained behavior.
+              Policy initialized from human demonstration data. PPO fine-tunes on top of the
+              pre-trained behavior, leveraging the BC prior to skip the blind exploration phase entirely.
+            </p>
+          </div>
+        </div>
+
+        <!-- Strategy B: Scratch -->
+        <div class="column is-half">
+          <div style="
+            border: 2px solid #ff9f43;
+            border-radius: 10px;
+            padding: 1.25rem 1rem;
+            background: #fffbf5;
+            height: 100%;
+          ">
+            <p style="font-weight: 700; font-size: 1rem; margin-bottom: 0.6rem; color: #e67e22;">
+              Strategy B — RL from Scratch
+            </p>
+            <ol style="margin-left: 1.1rem; font-size: 0.9rem; color: #363636;">
+              <li>Random policy initialization (<code>log_std_init = −2.0</code>)</li>
+              <li>PPO rollout collection in Isaac Sim</li>
+              <li>Reward: legal landing accuracy + illegal penalties</li>
+              <li>Repeat until convergence</li>
+            </ol>
+            <p style="font-size: 0.85rem; color: #7a7a7a; margin-top: 0.75rem;">
+              No prior knowledge is used. The policy must discover a valid serving pose entirely
+              through trial-and-error exploration. Because legal ball contact requires precise
+              paddle orientation within a narrow feasible region, convergence is slow and heavily
+              dependent on the initial exploration budget.
             </p>
           </div>
         </div>
 
       </div>
 
-      <!-- Pipeline diagram for Strategy B -->
+      <!-- Pipeline diagram for Strategy A -->
       <div class="has-text-centered" style="margin-top: 1.75rem;">
         <figure class="image">
           <img src="static/images/training_pipeline.jpg"
-               alt="Strategy B pipeline: Demonstration Data → Behavior Cloning (MLP 10D→6D) → Weight Transfer → PPO Fine-tuning → Final Serving Policy"
+               alt="Strategy A pipeline: Demonstration Data → Behavior Cloning (MLP 160→300→300→80) → Weight Transfer → Critic Warm-up → PPO Fine-tuning → Final Serving Policy"
                loading="lazy"
                style="max-width: 420px; margin: 0 auto; display: block; border-radius: 4px;">
         </figure>
         <p class="is-size-6 has-text-grey" style="margin-top: 0.5rem;">
-          Figure 4: Detailed pipeline for Strategy B — Behavior Cloning pre-training
-          on SEAL teleoperation data, weight transfer to the PPO actor, and
-          PPO fine-tuning in Isaac Sim.
+          Figure 4: Detailed pipeline for Strategy A — Behavior Cloning pre-training
+          on SEAL teleoperation data, weight transfer to the PPO actor, critic warm-up,
+          and PPO fine-tuning in Isaac Sim.
         </p>
       </div>
 
       <div class="content has-text-justified" style="margin-top: 1.25rem;">
         <p>
-          Both strategies are evaluated under identical PPO hyperparameters and reward functions.
+          Both strategies are evaluated under identical PPO hyperparameters
+          (<code>lr = 3×10<sup>−4</sup></code>, <code>γ = 0.99</code>,
+          <code>λ = 0.95</code>, <code>ε = 0.2</code>,
+          <code>n_steps = 40</code>, <code>batch_size = 128</code>).
           The key experimental question is whether supervised pre-training provides a useful
-          initialization that PPO can build upon, or whether it introduces instability that
-          prevents further improvement. The results of this comparison are presented in the
-          following section.
+          initialization that PPO can build upon, or whether it introduces instability —
+          such as overly conservative behaviour near the BC manifold — that prevents further
+          improvement. The results of this comparison are presented in the following section.
         </p>
       </div>
 
