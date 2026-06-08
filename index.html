@@ -407,23 +407,14 @@
         </p>
       </div>
       <div class="has-text-centered" style="margin-top: 1.5rem;">
-        <div style="
-          background: #f5f5f5;
-          border: 2px dashed #b5b5b5;
-          border-radius: 8px;
-          padding: 2.5rem 2rem;
-          color: #7a7a7a;
-          max-width: 720px;
-          margin: 0 auto;
-        ">
-          <span class="icon is-large" style="margin-bottom: 0.5rem; display: block;">
-            <i class="fas fa-image fa-2x"></i>
-          </span>
-          <p class="is-size-6">Figure will be added later — training pipeline diagram
-            (rollout collection → advantage estimation → PPO update).</p>
-        </div>
+        <figure class="image">
+          <img src="static/images/training_pipeline.png"
+               alt="Training pipeline: Demonstration Data → Behavior Cloning (MLP) → Weight Transfer → PPO Fine-tuning → Final Serving Policy"
+               loading="lazy"
+               style="max-width: 480px; margin: 0 auto; display: block; border-radius: 4px;">
+        </figure>
         <p class="is-size-6 has-text-grey" style="margin-top: 0.5rem;">
-          Figure 2: Training pipeline for the PPO-based serving policy.
+          Figure 2: Training pipeline — Behavior Cloning pre-training followed by PPO fine-tuning in Isaac Sim.
         </p>
       </div>
     </div>
@@ -437,36 +428,64 @@
       <h2 class="title is-3 has-text-centered">Results</h2>
       <div class="content has-text-justified">
         <p>
-          This section presents selected training observations gathered during the course of the
-          project. We report qualitative and, where available, quantitative findings including
-          learning curves showing episodic return over training iterations, serving consistency
-          measured as the fraction of episodes in which the ball successfully lands on the target
-          side of the table, and visualized trajectory behavior of the robot arm under the learned
-          policy. These observations are intended to convey the general training dynamics rather than
-          to serve as a definitive benchmark. Variability across random seeds and sensitivity to
-          hyperparameter choices were observed and are discussed in the project report.
+          We compare two training conditions over approximately 16,000 environment timesteps:
+          <strong>RL after Supervised Learning</strong> (blue), in which the PPO actor is
+          initialized with weights from a Behavior Cloning pre-trained policy, and
+          <strong>RL from Scratch</strong> (orange), in which PPO is trained from random
+          initialization without any prior demonstration data.
+        </p>
+        <p>
+          In the <em>RL after Supervised Learning</em> condition, the policy weights were frozen
+          during an initial warm-up phase. After the freeze is released at approximately the 3k
+          timestep mark, both the mean episode reward and the mean episode length drop sharply.
+          The reward falls below zero and does not recover throughout the remaining training
+          budget, suggesting that the PPO update destabilizes the pre-trained policy rather than
+          improving it. The RL fine-tuning stage did not converge to a stable or better-performing
+          serving behavior.
+        </p>
+        <p>
+          In contrast, <em>RL from Scratch</em> starts with no prior knowledge of the task but
+          exhibits a gradual upward trend in mean episode reward from the beginning of training.
+          The reward stabilizes at approximately 3.0–3.5 after around 4k timesteps and remains
+          at that level for the rest of training. Nevertheless, the final converged reward does
+          not exceed the initial reward observed in the supervised pre-trained policy before fine-tuning began.
+        </p>
+        <p>
+          Overall, these results indicate that neither training strategy produces a policy that
+          outperforms the original SEAL approach. The RL fine-tuning phase failed to leverage the
+          supervised initialization effectively, while RL from scratch converges to a lower reward
+          ceiling. The findings highlight the difficulty of applying standard PPO fine-tuning on
+          top of imitation-learned policies and motivate further investigation into more stable
+          warm-starting strategies.
         </p>
       </div>
-      <div class="has-text-centered" style="margin-top: 1.5rem;">
-        <div style="
-          background: #f5f5f5;
-          border: 2px dashed #b5b5b5;
-          border-radius: 8px;
-          padding: 2.5rem 2rem;
-          color: #7a7a7a;
-          max-width: 720px;
-          margin: 0 auto;
-        ">
-          <span class="icon is-large" style="margin-bottom: 0.5rem; display: block;">
-            <i class="fas fa-chart-line fa-2x"></i>
-          </span>
-          <p class="is-size-6">Figure will be added later — learning curves and serving
-            consistency plots from training.</p>
+
+      <!-- Two charts side by side -->
+      <div class="columns is-centered" style="margin-top: 1.5rem;">
+        <div class="column is-half has-text-centered">
+          <figure class="image">
+            <img src="static/images/ppo_ep_rew_mean.png"
+                 alt="PPO Training — rollout/ep_rew_mean: mean episode reward over timesteps for RL after Supervised Learning vs RL from Scratch"
+                 loading="lazy"
+                 style="width: 100%; border-radius: 4px;">
+          </figure>
+          <p class="is-size-6 has-text-grey" style="margin-top: 0.4rem;">
+            Figure 3a: Mean episode reward (<code>ep_rew_mean</code>) over training timesteps.
+          </p>
         </div>
-        <p class="is-size-6 has-text-grey" style="margin-top: 0.5rem;">
-          Figure 3: Training observations — learning curves and serving consistency.
-        </p>
+        <div class="column is-half has-text-centered">
+          <figure class="image">
+            <img src="static/images/ppo_ep_len_mean.png"
+                 alt="PPO Training — rollout/ep_len_mean: mean episode length over timesteps for RL after Supervised Learning vs RL from Scratch"
+                 loading="lazy"
+                 style="width: 100%; border-radius: 4px;">
+          </figure>
+          <p class="is-size-6 has-text-grey" style="margin-top: 0.4rem;">
+            Figure 3b: Mean episode length (<code>ep_len_mean</code>) over training timesteps.
+          </p>
+        </div>
       </div>
+
     </div>
   </section>
   <!-- End Results -->
