@@ -298,10 +298,13 @@
           </li>
           <li>
             <strong>Strategy A — RL after Supervised Learning (BC → PPO).</strong>&nbsp;
-            The SEAL MLP weights are transferred directly into the PPO actor.
-            After a 1,000-step critic warm-up with the actor frozen, full PPO
-            fine-tuning proceeds. This tests whether the BC prior accelerates
-            convergence beyond the SEAL baseline.
+            BC weights are transferred into the <strong>actor only</strong>
+            (<code>policy_net</code> + <code>action_net</code>);
+            the critic (<code>value_net</code>) is <strong>randomly initialized</strong>.
+            During a 1,000-step warm-up the actor is frozen while the critic trains
+            from scratch to establish a value baseline. PPO then fine-tunes both
+            networks freely. This tests whether the BC prior accelerates convergence
+            beyond the SEAL baseline.
           </li>
           <li>
             <strong>Strategy B — RL from Scratch.</strong>&nbsp;
@@ -421,10 +424,15 @@
           estimates (GAE) for variance reduction.
         </p>
         <p>
-          To avoid the cold-start problem of learning from scratch, the actor is initialized
-          from a pre-trained <strong>Behavior Cloning (BC)</strong> checkpoint. During the
-          first <strong>1,000 environment steps</strong>, the actor is frozen while only the
-          critic is updated, allowing the value baseline to warm up before policy gradients begin.
+          For Strategy A, the actor trunk (<code>policy.mlp_extractor.policy_net</code>) and
+          actor output head (<code>policy.action_net</code>) are initialized directly from the
+          pre-trained <strong>Behavior Cloning (BC)</strong> checkpoint.
+          The critic trunk (<code>policy.mlp_extractor.value_net</code>) and critic output head
+          (<code>policy.value_net</code>) are <strong>randomly initialized</strong> — BC weights
+          are never copied into the critic.
+          During the first <strong>1,000 environment steps</strong>, the actor is frozen while
+          only the randomly-initialized critic is updated, allowing the value baseline to
+          stabilize before policy gradients begin.
         </p>
 
         <h3 class="title is-5" style="margin-top: 1.4rem; margin-bottom: 0.4rem;">State Space</h3>
@@ -681,13 +689,20 @@
             <ol style="margin-left: 1.1rem; font-size: 0.9rem; color: #363636;">
               <li>Demonstration data collection via SEAL teleoperation — legal serve state-action pairs recorded as (ref_pos, ref_euler, landing_xy, error) → (delta_pos, delta_euler)</li>
               <li>Behavior Cloning (BC): MLP (160 → 300 → 300 → 80) trained on state-action pairs via supervised regression</li>
-              <li>Weight transfer: BC actor weights loaded into the PPO actor as a <strong>one-time warm start</strong> — no BC loss is used during PPO training</li>
-              <li>Critic warm-up (~1,000 steps): actor frozen, only critic trained to establish a stable value baseline</li>
-              <li>PPO fine-tuning: actor unfrozen, standard PPO update loop proceeds freely</li>
+              <li>
+                Weight transfer — <strong>Actor only</strong>: BC weights loaded into
+                <code>policy.mlp_extractor.policy_net</code> (trunk) and
+                <code>policy.action_net</code> (output head).
+                Critic (<code>value_net</code>) remains <strong>randomly initialized</strong>.
+                No BC loss is added at any point.
+              </li>
+              <li>Critic warm-up (~1,000 steps): actor frozen, only the randomly-initialized critic is trained to build a stable value baseline</li>
+              <li>PPO fine-tuning: actor unfrozen, standard PPO update loop trains both actor and critic freely</li>
             </ol>
             <p style="font-size: 0.85rem; color: #7a7a7a; margin-top: 0.75rem;">
-              BC provides <em>policy initialization only</em> — a warm start that skips blind
-              exploration. PPO then fine-tunes freely with no BC regularization term.
+              BC provides <em>actor initialization only</em> — a one-time warm start.
+              The critic is always trained from scratch, and PPO fine-tunes both networks
+              freely with no BC regularization term.
             </p>
           </div>
         </div>
@@ -746,7 +761,7 @@
           max-width: 680px;
         ">
           <p class="is-size-7" style="margin: 0 0 0.3rem; font-weight: 600; color: #856404;">
-            ⚠ Note on diagram labels
+            Note on diagram labels
           </p>
           <p class="is-size-7" style="margin: 0 0 0.25rem; color: #555;">
             <strong>"Behavior Cloning as Policy Initialization"</strong> —
@@ -792,9 +807,11 @@
           initialization without any prior demonstration data.
         </p>
         <p>
-          In the <em>RL after Supervised Learning</em> condition, the policy weights were frozen
-          during an initial warm-up phase. After the freeze is released at approximately the 3k
-          timestep mark, both the mean episode reward and the mean episode length drop sharply.
+          In the <em>RL after Supervised Learning</em> condition, the actor weights (initialized
+          from BC) were frozen during an initial ~1,000-step warm-up phase while only the
+          randomly-initialized critic was updated. After the actor freeze is released at
+          approximately the 3k timestep mark, both the mean episode reward and the mean
+          episode length drop sharply.
           The reward falls below zero and does not recover throughout the remaining training
           budget, suggesting that the PPO update destabilizes the pre-trained policy rather than
           improving it. The RL fine-tuning stage did not converge to a stable or better-performing
