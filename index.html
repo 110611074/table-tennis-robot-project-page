@@ -364,26 +364,65 @@
     <div class="container is-max-desktop">
       <h2 class="title is-3 has-text-centered">Reinforcement Learning Framework</h2>
       <div class="content has-text-justified">
+
+        <h3 class="title is-5" style="margin-bottom: 0.4rem;">Algorithm — PPO</h3>
         <p>
-          We adopt <strong>Proximal Policy Optimization (PPO)</strong> as the core RL algorithm due to
-          its established stability and sample efficiency in continuous robot control benchmarks.
-          PPO constrains each policy gradient update via a clipped surrogate objective, which helps
-          prevent destructively large parameter updates that are common in naive policy gradient methods.
+          We use <strong>Proximal Policy Optimization (PPO)</strong> as the core RL algorithm.
+          PPO is an on-policy actor-critic method that constrains each gradient update via a
+          clipped surrogate objective, preventing destructively large policy changes while still
+          making consistent progress. Both the actor and critic are implemented as multi-layer
+          perceptrons (MLPs). The actor outputs the mean and log-standard deviation of a Gaussian
+          distribution over the action space; the critic estimates state value for generalized
+          advantage estimation (GAE).
         </p>
+
+        <h3 class="title is-5" style="margin-top: 1.2rem; margin-bottom: 0.4rem;">State Space</h3>
         <p>
-          The policy and value networks share a common feature extractor implemented as a
-          multi-layer perceptron (MLP). The actor head outputs the mean and log-standard deviation of
-          a Gaussian distribution over the action space, enabling stochastic exploration during training.
-          The critic head estimates the expected return from the current state, which is used to compute
-          generalized advantage estimates (GAE) for variance reduction.
+          At each control step, the agent observes a 10-dimensional state vector:
         </p>
+        <ul>
+          <li><strong>Joint angles</strong> of the UR10 arm (6 DOF)</li>
+          <li><strong>Ball position</strong> in the table frame (x, y, z)</li>
+          <li><strong>Ball velocity</strong> (magnitude or directional component)</li>
+        </ul>
         <p>
-          Reward shaping plays a central role in guiding early-stage exploration. Sparse rewards alone
-          proved insufficient to obtain consistent contact during initial experiments; a dense shaping
-          term that rewards reducing the distance between the paddle and the incoming ball was therefore
-          included. We note that the degree to which the final policy generalizes beyond the training
-          distribution remains an open question and is subject to further evaluation.
+          All observations are normalized to zero mean and unit variance before being fed into
+          the policy network to improve training stability.
         </p>
+
+        <h3 class="title is-5" style="margin-top: 1.2rem; margin-bottom: 0.4rem;">Action Space</h3>
+        <p>
+          The policy outputs a 6-dimensional continuous action vector corresponding to
+          target joint velocities (or incremental joint positions) for each of the UR10's joints.
+          Actions are clipped to safe operating ranges before being passed to the low-level
+          joint controller in Isaac Sim.
+        </p>
+
+        <h3 class="title is-5" style="margin-top: 1.2rem; margin-bottom: 0.4rem;">Reward Function</h3>
+        <p>
+          The reward signal combines three terms designed to guide the agent toward a successful serve:
+        </p>
+        <ul>
+          <li>
+            <strong>Contact reward:</strong> a positive bonus when the paddle successfully
+            makes contact with the ball, encouraging the agent to swing toward the ball.
+          </li>
+          <li>
+            <strong>Trajectory reward:</strong> a shaping term that decreases the distance
+            between the paddle and the ball, providing dense feedback during early exploration
+            when contact events are rare.
+          </li>
+          <li>
+            <strong>Landing reward:</strong> a positive bonus when the ball lands on the
+            target half of the opposite side of the table, directly encoding the serving objective.
+          </li>
+        </ul>
+        <p>
+          Sparse rewards alone proved insufficient during early experiments; the dense trajectory
+          shaping term was critical for obtaining reliable ball contact within a reasonable
+          training budget.
+        </p>
+
       </div>
     </div>
   </section>
@@ -396,34 +435,94 @@
       <h2 class="title is-3 has-text-centered">System Architecture</h2>
       <div class="content has-text-justified">
         <p>
-          The figure below illustrates the overall system architecture. The simulation environment
-          exposes a Gym-compatible interface that the RL agent interacts with at a fixed control
-          frequency. Observations are normalized before being fed into the policy network, and actions
-          are clipped and scaled before being passed to the low-level joint controller.
-          The training loop collects a fixed number of environment steps per update, computes
-          advantages, and performs several epochs of mini-batch gradient descent on the PPO objective.
+          The system follows a closed-loop data-flow architecture with three main components:
+          the <strong>Isaac Sim environment</strong>, the <strong>policy network</strong>, and
+          the <strong>joint controller</strong>.
         </p>
       </div>
-      <div class="has-text-centered" style="margin-top: 1.5rem;">
-        <div style="
-          background: #f5f5f5;
-          border: 2px dashed #b5b5b5;
-          border-radius: 8px;
-          padding: 2.5rem 2rem;
-          color: #7a7a7a;
-          max-width: 720px;
-          margin: 0 auto;
-        ">
-          <span class="icon is-large" style="margin-bottom: 0.5rem; display: block;">
-            <i class="fas fa-image fa-2x"></i>
-          </span>
-          <p class="is-size-6">Figure will be added later — system architecture diagram
-            (RL agent ↔ physics simulator ↔ joint controller).</p>
+
+      <!-- Data flow diagram rendered in HTML -->
+      <div style="max-width: 680px; margin: 1.5rem auto 0;">
+
+        <!-- Row of boxes -->
+        <div style="display: flex; align-items: stretch; gap: 0; justify-content: center; flex-wrap: wrap;">
+
+          <!-- Box 1: Isaac Sim -->
+          <div style="
+            flex: 1; min-width: 150px; max-width: 200px;
+            border: 2px solid #363636; border-radius: 8px;
+            padding: 1rem 0.75rem; text-align: center;
+            background: #fff;
+          ">
+            <p style="font-weight: 700; margin-bottom: 0.4rem;">Isaac Sim</p>
+            <p class="is-size-7 has-text-grey">Physics simulator<br>Ball + robot dynamics</p>
+          </div>
+
+          <!-- Arrow right -->
+          <div style="display:flex; align-items:center; padding: 0 0.5rem; font-size: 1.4rem; color: #363636;">→</div>
+
+          <!-- Box 2: Observation -->
+          <div style="
+            flex: 1; min-width: 150px; max-width: 200px;
+            border: 2px solid #3273dc; border-radius: 8px;
+            padding: 1rem 0.75rem; text-align: center;
+            background: #eff5fb;
+          ">
+            <p style="font-weight: 700; margin-bottom: 0.4rem;">Observation</p>
+            <p class="is-size-7 has-text-grey">Joint angles (6D)<br>Ball pos &amp; vel (4D)</p>
+          </div>
+
+          <!-- Arrow right -->
+          <div style="display:flex; align-items:center; padding: 0 0.5rem; font-size: 1.4rem; color: #363636;">→</div>
+
+          <!-- Box 3: Policy (PPO) -->
+          <div style="
+            flex: 1; min-width: 150px; max-width: 200px;
+            border: 2px solid #23d160; border-radius: 8px;
+            padding: 1rem 0.75rem; text-align: center;
+            background: #effbf4;
+          ">
+            <p style="font-weight: 700; margin-bottom: 0.4rem;">Policy (MLP)</p>
+            <p class="is-size-7 has-text-grey">PPO actor–critic<br>Outputs action (6D)</p>
+          </div>
+
+          <!-- Arrow right -->
+          <div style="display:flex; align-items:center; padding: 0 0.5rem; font-size: 1.4rem; color: #363636;">→</div>
+
+          <!-- Box 4: Joint Controller -->
+          <div style="
+            flex: 1; min-width: 150px; max-width: 200px;
+            border: 2px solid #ff3860; border-radius: 8px;
+            padding: 1rem 0.75rem; text-align: center;
+            background: #fff0f3;
+          ">
+            <p style="font-weight: 700; margin-bottom: 0.4rem;">Joint Controller</p>
+            <p class="is-size-7 has-text-grey">Clip &amp; scale action<br>Send to UR10 joints</p>
+          </div>
+
         </div>
-        <p class="is-size-6 has-text-grey" style="margin-top: 0.5rem;">
-          Figure 2: System architecture overview.
+
+        <!-- Feedback arrow label -->
+        <div style="text-align: center; margin-top: 0.6rem; color: #7a7a7a; font-size: 0.8rem;">
+          ↑ Reward &amp; next state fed back to PPO update loop ↑
+        </div>
+
+        <p class="is-size-6 has-text-grey has-text-centered" style="margin-top: 0.75rem;">
+          Figure 2: Data flow — Isaac Sim → observation → PPO policy → joint controller → Isaac Sim.
         </p>
       </div>
+
+      <div class="content has-text-justified" style="margin-top: 1.5rem;">
+        <p>
+          At each timestep, Isaac Sim provides the normalized observation to the policy network.
+          The actor MLP outputs a 6-dimensional action (target joint velocities) which is clipped
+          to safe ranges and forwarded to the UR10 joint controller. After execution, Isaac Sim
+          steps forward, computes the reward, and returns the next observation. Collected
+          transitions are stored in a rollout buffer; once a fixed number of steps is reached,
+          PPO performs several epochs of mini-batch gradient descent before the next rollout begins.
+        </p>
+      </div>
+
     </div>
   </section>
   <!-- End System Architecture -->
@@ -435,26 +534,90 @@
       <h2 class="title is-3 has-text-centered">Training Pipeline</h2>
       <div class="content has-text-justified">
         <p>
-          The training pipeline follows a standard on-policy RL schedule. At the start of each
-          iteration, the current policy collects a batch of rollouts by interacting with the
-          simulator for a fixed number of timesteps. The collected data are then used to estimate
-          advantages and to update both the actor and critic networks. This process is repeated
-          for a pre-specified number of iterations or until early stopping criteria are met.
-          Curriculum strategies, such as gradually increasing the difficulty of the initial ball
-          position, were explored to improve sample efficiency in later training stages.
+          To investigate the role of prior knowledge in RL-based serving, we design and compare
+          <strong>two training strategies</strong> that share the same PPO loop and reward
+          function but differ in how the policy is initialized.
         </p>
       </div>
-      <div class="has-text-centered" style="margin-top: 1.5rem;">
+
+      <!-- Two-column strategy comparison -->
+      <div class="columns is-centered" style="margin-top: 1.2rem;">
+
+        <!-- Strategy A: Scratch -->
+        <div class="column is-half">
+          <div style="
+            border: 2px solid #ff9f43;
+            border-radius: 10px;
+            padding: 1.25rem 1rem;
+            background: #fffbf5;
+            height: 100%;
+          ">
+            <p style="font-weight: 700; font-size: 1rem; margin-bottom: 0.6rem; color: #e67e22;">
+              Strategy A — RL from Scratch
+            </p>
+            <ol style="margin-left: 1.1rem; font-size: 0.9rem; color: #363636;">
+              <li>Random policy initialization</li>
+              <li>PPO rollout collection in Isaac Sim</li>
+              <li>Reward: contact + trajectory + landing</li>
+              <li>Repeat until convergence (~16k steps)</li>
+            </ol>
+            <p style="font-size: 0.85rem; color: #7a7a7a; margin-top: 0.75rem;">
+              No prior knowledge. Policy must discover serving motion from scratch via exploration alone.
+            </p>
+          </div>
+        </div>
+
+        <!-- Strategy B: SL + PPO -->
+        <div class="column is-half">
+          <div style="
+            border: 2px solid #3273dc;
+            border-radius: 10px;
+            padding: 1.25rem 1rem;
+            background: #f5f8ff;
+            height: 100%;
+          ">
+            <p style="font-weight: 700; font-size: 1rem; margin-bottom: 0.6rem; color: #2563eb;">
+              Strategy B — RL after Supervised Learning
+            </p>
+            <ol style="margin-left: 1.1rem; font-size: 0.9rem; color: #363636;">
+              <li>Teleoperation data collection (SEAL)</li>
+              <li>Behavior Cloning: MLP trained on state-action pairs</li>
+              <li>Transfer BC weights to PPO actor</li>
+              <li>Freeze weights → warm-up phase (~3k steps)</li>
+              <li>Unfreeze → PPO fine-tuning in Isaac Sim</li>
+            </ol>
+            <p style="font-size: 0.85rem; color: #7a7a7a; margin-top: 0.75rem;">
+              Policy initialized from human demonstration. PPO fine-tunes on top of the pre-trained behavior.
+            </p>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Pipeline diagram for Strategy B -->
+      <div class="has-text-centered" style="margin-top: 1.75rem;">
         <figure class="image">
           <img src="static/images/training_pipeline.png"
-               alt="Training pipeline: Demonstration Data → Behavior Cloning (MLP) → Weight Transfer → PPO Fine-tuning → Final Serving Policy"
+               alt="Strategy B pipeline: Demonstration Data → Behavior Cloning (MLP 10D→6D) → Weight Transfer → PPO Fine-tuning → Final Serving Policy"
                loading="lazy"
-               style="max-width: 480px; margin: 0 auto; display: block; border-radius: 4px;">
+               style="max-width: 420px; margin: 0 auto; display: block; border-radius: 4px;">
         </figure>
         <p class="is-size-6 has-text-grey" style="margin-top: 0.5rem;">
-          Figure 2: Training pipeline — Behavior Cloning pre-training followed by PPO fine-tuning in Isaac Sim.
+          Figure 3: Detailed pipeline for Strategy B — Behavior Cloning pre-training
+          followed by PPO fine-tuning in Isaac Sim.
         </p>
       </div>
+
+      <div class="content has-text-justified" style="margin-top: 1.25rem;">
+        <p>
+          Both strategies are evaluated under identical PPO hyperparameters and reward functions.
+          The key experimental question is whether supervised pre-training provides a useful
+          initialization that PPO can build upon, or whether it introduces instability that
+          prevents further improvement. The results of this comparison are presented in the
+          following section.
+        </p>
+      </div>
+
     </div>
   </section>
   <!-- End Training Pipeline -->
