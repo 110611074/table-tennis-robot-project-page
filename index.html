@@ -406,177 +406,137 @@
 
   <!-- ===== Reinforcement Learning Framework ===== -->
   <section class="section hero is-light">
-    <div class="container is-max-desktop">
+    <div class="container" style="max-width: 1100px; margin: 0 auto; padding: 0 1.5rem;">
       <h2 class="title is-3 has-text-centered">Reinforcement Learning Framework</h2>
 
-      <!-- Shared: intro -->
-      <div class="content has-text-justified">
+      <!-- ── Algorithm comparison table ── -->
+      <div class="content has-text-justified" style="margin-bottom: 1.2rem;">
         <p>
-          Both strategies share the same Isaac Sim environment, state space, action space,
-          and reward function, but use <strong>different RL algorithms and network
-          initializations</strong>. Strategy A uses PPO (on-policy, stochastic policy)
-          initialized from a BC checkpoint; Strategy B uses TD3 (off-policy, deterministic
-          policy) trained entirely from random initialization.
+          Both strategies use <strong>PPO</strong> on the same environment, state space,
+          action space, and reward function. They differ only in network architecture
+          and initialization strategy.
         </p>
       </div>
 
-      <!-- A/B split panels -->
-      <div class="columns is-desktop" style="margin-top: 1rem; align-items: flex-start;">
+      <div class="table-container" style="margin-bottom: 2rem;">
+        <table class="table is-bordered is-hoverable is-fullwidth" style="font-size: 0.9rem;">
+          <thead style="background: #f0f0f0;">
+            <tr>
+              <th style="width: 22%;">Property</th>
+              <th style="width: 39%; background: #e8f0fc; color: #2563eb;">Strategy A — BC → PPO</th>
+              <th style="width: 39%; background: #fff5e8; color: #e67e22;">Strategy B — RL from Scratch</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Algorithm</strong></td>
+              <td>PPO (on-policy, stochastic actor)</td>
+              <td>PPO (on-policy, stochastic actor)</td>
+            </tr>
+            <tr>
+              <td><strong>Network arch</strong></td>
+              <td><code>160 → 300 → 300 → 80</code></td>
+              <td><code>256 → 256 → 256</code></td>
+            </tr>
+            <tr>
+              <td><strong>Actor init</strong></td>
+              <td>BC checkpoint (<code>policy_net</code> + <code>action_net</code>)</td>
+              <td>Random</td>
+            </tr>
+            <tr>
+              <td><strong>Critic init</strong></td>
+              <td>Random (<code>value_net</code>)</td>
+              <td>Random</td>
+            </tr>
+            <tr>
+              <td><strong>Warm-up</strong></td>
+              <td>1,000 steps — actor frozen, critic trains alone</td>
+              <td>None</td>
+            </tr>
+            <tr>
+              <td><strong>BC during training</strong></td>
+              <td>None — PPO fine-tunes freely after warm-up</td>
+              <td>Optional aux loss: <code>bc_coef × MSE(π_mean, a_demo)</code><br><small style="color:#888;">(default 0.5; set 0 for plain PPO)</small></td>
+            </tr>
+            <tr>
+              <td><strong><code>log_std_init</code></strong></td>
+              <td colspan="2" style="text-align:center;">−2.0 (both strategies)</td>
+            </tr>
+            <tr>
+              <td><strong>Hyperparameters</strong></td>
+              <td colspan="2" style="text-align:center;"><code>lr=3×10⁻⁴, γ=0.99, λ=0.95, ε=0.2, n_steps=40, n_epochs=10, batch=128</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
-        <!-- ── Strategy A ── -->
-        <div class="column">
-          <div style="border: 2px solid #3273dc; border-radius: 10px; padding: 1.4rem 1.2rem; background: #f5f8ff; height: 100%;">
-
-            <p style="font-weight: 700; font-size: 1rem; color: #2563eb; margin-bottom: 1rem; border-bottom: 1px solid #c5d8f8; padding-bottom: 0.5rem;">
-              Strategy A — RL after Supervised Learning (BC → PPO)
-            </p>
-
-            <p style="font-weight: 600; margin-bottom: 0.3rem;">Network Initialization</p>
-            <p style="font-size: 0.9rem;">
-              MLP architecture: <strong>160 → 300 → 300 → 80</strong>
-              (<code>log_std_init = −2.0</code>).<br>
-              <strong>Actor only</strong> (<code>policy_net</code> + <code>action_net</code>)
-              is loaded from the BC checkpoint.<br>
-              <strong>Critic</strong> (<code>value_net</code>) is
-              <strong>randomly initialized</strong>.<br>
-              First 1,000 steps: actor frozen, critic trains alone to warm up the value baseline.
-              Then both networks fine-tune freely via PPO.
-            </p>
-
-            <p style="font-weight: 600; margin-top: 1rem; margin-bottom: 0.3rem;">State Space (10D)</p>
-            <div class="table-container">
-              <table class="table is-bordered is-striped is-hoverable is-fullwidth is-size-7" style="margin-bottom: 0;">
-                <thead>
-                  <tr><th>Dim</th><th>Feature</th><th>Description</th></tr>
-                </thead>
-                <tbody>
-                  <tr><td><code>[0:3]</code></td><td><code>ref_pos</code></td><td>Paddle face position (x, y, z) in m</td></tr>
-                  <tr><td><code>[3:6]</code></td><td><code>ref_euler</code></td><td>Paddle orientation (roll, pitch, yaw) in rad</td></tr>
-                  <tr><td><code>[6:8]</code></td><td><code>landing_xy</code></td><td>Last ball landing position (x, y)</td></tr>
-                  <tr><td><code>[8:10]</code></td><td><code>target − landing</code></td><td>2D error to target landing point</td></tr>
-                </tbody>
-              </table>
-            </div>
-            <p style="font-size: 0.8rem; color: #666; margin-top: 0.3rem;">
-              Orientation composed internally as quaternions; Euler used only for observation.
-            </p>
-
-            <p style="font-weight: 600; margin-top: 1rem; margin-bottom: 0.3rem;">Action Space (6D) — Residual Pose Correction</p>
-            <div class="table-container">
-              <table class="table is-bordered is-striped is-hoverable is-fullwidth is-size-7" style="margin-bottom: 0;">
-                <thead>
-                  <tr><th>Dim</th><th>Feature</th><th>Physical bound</th></tr>
-                </thead>
-                <tbody>
-                  <tr><td><code>[0:3]</code></td><td><code>delta_pos</code></td><td>±0.05 m per axis</td></tr>
-                  <tr><td><code>[3:6]</code></td><td><code>delta_euler</code></td><td>±[0.18, 0.22, 0.30] rad (r, p, y)</td></tr>
-                </tbody>
-              </table>
-            </div>
-            <p style="font-size: 0.8rem; color: #666; margin-top: 0.3rem;">
-              Normalized [−1, +1] → rescaled to physical units.
-              Orientation delta applied via quaternion multiplication; result passed to Lula IK solver.
-            </p>
-
-          </div>
+      <!-- ── Shared: State Space ── -->
+      <div style="margin-bottom: 1.8rem;">
+        <h3 class="title is-5" style="margin-bottom: 0.5rem;">
+          State Space — Shared (10D)
+        </h3>
+        <div class="table-container">
+          <table class="table is-bordered is-striped is-hoverable is-fullwidth">
+            <thead>
+              <tr><th style="width:12%;">Dimensions</th><th style="width:20%;">Feature</th><th>Description</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>[0:3]</code></td><td><code>ref_pos</code></td><td>Current paddle face position (x, y, z) in metres</td></tr>
+              <tr><td><code>[3:6]</code></td><td><code>ref_euler</code></td><td>Current paddle face orientation as Euler angles (roll, pitch, yaw) in radians</td></tr>
+              <tr><td><code>[6:8]</code></td><td><code>landing_xy</code></td><td>Most recent ball landing position on the table (x, y)</td></tr>
+              <tr><td><code>[8:10]</code></td><td><code>target − landing</code></td><td>2D error vector from last landing to the target landing point</td></tr>
+            </tbody>
+          </table>
         </div>
+        <p class="is-size-7 has-text-grey" style="margin-top: 0.3rem;">
+          Orientation maintained internally as quaternions to avoid gimbal lock; Euler representation used only for the observation.
+        </p>
+      </div>
 
-        <!-- ── Strategy B ── -->
-        <div class="column">
-          <div style="border: 2px dashed #ff9f43; border-radius: 10px; padding: 1.4rem 1.2rem; background: #fffbf5; height: 100%;">
-
-            <p style="font-weight: 700; font-size: 1rem; color: #e67e22; margin-bottom: 1rem; border-bottom: 1px solid #ffd591; padding-bottom: 0.5rem;">
-              Strategy B — RL from Scratch
-            </p>
-
-            <p style="font-weight: 600; margin-bottom: 0.3rem;">Algorithm — PPO from Scratch</p>
-            <p style="font-size: 0.9rem;">
-              Same <strong>Proximal Policy Optimization (PPO)</strong> algorithm as Strategy A,
-              but with <strong>fully random initialization</strong> — no BC checkpoint is loaded.
-              Policy architecture: <strong>256 → 256 → 256</strong> MLP
-              (<code>log_std_init = −2.0</code>), shared for both actor (<code>pi</code>)
-              and critic (<code>vf</code>).
-            </p>
-            <p style="font-size: 0.9rem; margin-top: 0.5rem;">
-              An optional <strong>BC auxiliary loss</strong> can be enabled alongside PPO:
-              after each rollout update, <code>n_epochs</code> additional gradient steps
-              minimize <code>bc_coef × MSE(π_mean(s_demo), a_demo)</code> on CSV demo pairs,
-              anchoring the policy mean toward demonstrated actions without changing
-              <code>log_std</code>. Setting <code>--bc-coef 0</code> gives plain PPO.
-            </p>
-
-            <p style="font-weight: 600; margin-top: 1rem; margin-bottom: 0.3rem;">Network Initialization</p>
-            <p style="font-size: 0.9rem;">
-              All weights <strong>randomly initialized</strong> — no BC checkpoint is used.
-              Actor and critic share the same <strong>256 → 256 → 256</strong> trunk.
-            </p>
-
-            <p style="font-weight: 600; margin-top: 1rem; margin-bottom: 0.3rem;">State Space (10D) — same as Strategy A</p>
-            <div class="table-container">
-              <table class="table is-bordered is-striped is-hoverable is-fullwidth is-size-7" style="margin-bottom: 0;">
-                <thead>
-                  <tr><th>Dim</th><th>Feature</th><th>Description</th></tr>
-                </thead>
-                <tbody>
-                  <tr><td><code>[0:3]</code></td><td><code>ref_pos</code></td><td>Paddle face position (x, y, z) in m</td></tr>
-                  <tr><td><code>[3:6]</code></td><td><code>ref_euler</code></td><td>Paddle orientation (roll, pitch, yaw) in rad</td></tr>
-                  <tr><td><code>[6:8]</code></td><td><code>landing_xy</code></td><td>Last ball landing position (x, y)</td></tr>
-                  <tr><td><code>[8:10]</code></td><td><code>target − landing</code></td><td>2D error to target landing point</td></tr>
-                </tbody>
-              </table>
-            </div>
-
-            <p style="font-weight: 600; margin-top: 1rem; margin-bottom: 0.3rem;">Action Space (6D) — same as Strategy A</p>
-            <div class="table-container">
-              <table class="table is-bordered is-striped is-hoverable is-fullwidth is-size-7" style="margin-bottom: 0;">
-                <thead>
-                  <tr><th>Dim</th><th>Feature</th><th>Physical bound</th></tr>
-                </thead>
-                <tbody>
-                  <tr><td><code>[0:3]</code></td><td><code>delta_pos</code></td><td>±0.05 m per axis</td></tr>
-                  <tr><td><code>[3:6]</code></td><td><code>delta_euler</code></td><td>±[0.18, 0.22, 0.30] rad (r, p, y)</td></tr>
-                </tbody>
-              </table>
-            </div>
-            <p style="font-size: 0.8rem; color: #666; margin-top: 0.3rem;">
-              Normalized [−1, +1] → rescaled to physical units.
-              Pose composed via quaternion multiplication; passed to Lula IK solver.
-            </p>
-
-          </div>
+      <!-- ── Shared: Action Space ── -->
+      <div style="margin-bottom: 1.8rem;">
+        <h3 class="title is-5" style="margin-bottom: 0.5rem;">
+          Action Space — Shared (6D, Residual Pose Correction)
+        </h3>
+        <div class="table-container">
+          <table class="table is-bordered is-striped is-hoverable is-fullwidth">
+            <thead>
+              <tr><th style="width:12%;">Dimensions</th><th style="width:20%;">Feature</th><th>Physical bound</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>[0:3]</code></td><td><code>delta_pos</code></td><td>Position offset ±0.05 m per axis</td></tr>
+              <tr><td><code>[3:6]</code></td><td><code>delta_euler</code></td><td>Euler angle offset ±[0.18, 0.22, 0.30] rad (roll, pitch, yaw)</td></tr>
+            </tbody>
+          </table>
         </div>
+        <p class="is-size-7 has-text-grey" style="margin-top: 0.3rem;">
+          Normalized [−1, +1] → rescaled to physical units inside the environment.
+          Orientation delta applied via quaternion multiplication; result passed to the Lula IK solver.
+        </p>
+      </div>
 
-      </div><!-- end columns -->
-
-      <!-- Shared: Reward Function -->
-      <div style="margin-top: 2rem; border: 2px solid #aaa; border-radius: 10px; padding: 1.4rem 1.2rem; background: #fafafa;">
+      <!-- ── Shared: Reward Function ── -->
+      <div style="border: 2px solid #aaa; border-radius: 10px; padding: 1.3rem 1.4rem; background: #fafafa;">
         <p style="font-weight: 700; font-size: 1rem; color: #363636; margin-bottom: 0.8rem; border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">
           Reward Function — Shared by Both Strategies
         </p>
         <div class="content has-text-justified">
           <p>
             Each episode consists of up to <strong>5 sub-steps</strong> targeting the same landing
-            point, allowing the policy to iteratively refine its serve.
-            The reward at each sub-step is:
+            point. The reward at each sub-step is \(r = r_{\text{status}} + r_{\text{action}}\):
           </p>
-          <p style="text-align: center; font-size: 1.05rem; margin: 0.6rem 0;">
-            \(r = r_{\text{status}} + r_{\text{action}}\)
-          </p>
-          <ul style="margin-top: 0.5rem;">
+          <ul style="margin-top: 0.4rem;">
             <li>
-              <strong>Legal serve reward (dense):</strong> when the ball lands legally on the
-              opponent's half,
-              \(r_{\text{status}} = 2 - \lVert\text{landing} - \text{target}\rVert_2\).
+              <strong>Legal serve (dense):</strong>
+              \(r_{\text{status}} = 2 - \lVert\text{landing} - \text{target}\rVert_2\)
             </li>
             <li>
               <strong>Illegal penalty (sparse):</strong>
-              \(r_{\text{status}} = -5.0 \times f\), where \(f = 1.2\) for a complete miss
-              and \(f = 0.05\) for insufficient bounces or indeterminate outcomes.
+              \(r_{\text{status}} = -5.0 \times f\) — \(f{=}1.2\) for miss, \(f{=}0.05\) for insufficient bounces / indeterminate
             </li>
             <li>
               <strong>Action regularization (optional):</strong>
-              \(r_{\text{action}} = -w \cdot \lVert a \rVert^2\), penalizing large residual
-              corrections to discourage unnecessary pose drift.
+              \(r_{\text{action}} = -w \cdot \lVert a \rVert^2\)
             </li>
           </ul>
         </div>
@@ -663,9 +623,9 @@
                 <p class="is-size-7 has-text-grey" style="margin: 0;">Physics simulator · Ball + robot dynamics</p>
               </div>
               <div style="text-align: center; font-size: 1.2rem; color: #555; line-height: 1.5;">↓</div>
-              <div style="border: 2px dashed #ffb347; border-radius: 6px; padding: 0.6rem; text-align: center; background: #fff3e0; min-height: 56px;">
-                <p style="font-weight: 700; font-size: 0.85rem; margin: 0; color: #888;">Observation (? D)</p>
-                <p class="is-size-7" style="margin: 0; color: #bbb;">[ To be filled ]</p>
+              <div style="border: 2px solid #3273dc; border-radius: 6px; padding: 0.6rem; text-align: center; background: #eff5fb;">
+                <p style="font-weight: 700; font-size: 0.85rem; margin: 0;">Observation (10D)</p>
+                <p class="is-size-7 has-text-grey" style="margin: 0;">ref_pos (3D) + ref_euler (3D)<br>landing_xy (2D) + error (2D)</p>
               </div>
               <div style="text-align: center; font-size: 1.2rem; color: #555; line-height: 1.5;">↓</div>
               <div style="border: 2px solid #23d160; border-radius: 6px; padding: 0.6rem; text-align: center; background: #effbf4;">
