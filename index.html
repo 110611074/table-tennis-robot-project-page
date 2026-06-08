@@ -408,145 +408,143 @@
   <section class="section hero is-light">
     <div class="container is-max-desktop">
       <h2 class="title is-3 has-text-centered">Reinforcement Learning Framework</h2>
+
+      <!-- Shared: PPO overview -->
       <div class="content has-text-justified">
-
-        <h3 class="title is-5" style="margin-bottom: 0.4rem;">Algorithm — PPO with BC Initialization</h3>
         <p>
-          We use <strong>Proximal Policy Optimization (PPO)</strong> as the core RL algorithm.
-          PPO is an on-policy actor-critic method whose clipped surrogate objective limits the
-          size of each policy gradient update, helping to avoid large destabilizing parameter
-          changes. Both the actor and critic are implemented as multi-layer perceptrons (MLPs)
-          with architecture <strong>160 → 300 → 300 → 80</strong>.
-          The actor outputs the mean and log-standard deviation of a Gaussian distribution
-          over the action space (with <code>log_std_init = −2.0</code> to keep initial actions
-          well within bounds), enabling stochastic exploration during training.
-          The critic estimates the state value used to compute generalized advantage
-          estimates (GAE) for variance reduction.
+          Both strategies use <strong>Proximal Policy Optimization (PPO)</strong> as the core
+          RL algorithm — an on-policy actor-critic method whose clipped surrogate objective
+          limits the size of each policy gradient update. The actor outputs the mean and
+          log-standard deviation of a Gaussian distribution over the action space;
+          the critic estimates the state value for GAE-based advantage computation.
+          The two strategies differ in how the policy is initialized and what state/action
+          representation is used.
         </p>
-        <p>
-          For Strategy A, the actor trunk (<code>policy.mlp_extractor.policy_net</code>) and
-          actor output head (<code>policy.action_net</code>) are initialized directly from the
-          pre-trained <strong>Behavior Cloning (BC)</strong> checkpoint.
-          The critic trunk (<code>policy.mlp_extractor.value_net</code>) and critic output head
-          (<code>policy.value_net</code>) are <strong>randomly initialized</strong> — BC weights
-          are never copied into the critic.
-          During the first <strong>1,000 environment steps</strong>, the actor is frozen while
-          only the randomly-initialized critic is updated, allowing the value baseline to
-          stabilize before policy gradients begin.
-        </p>
-
-        <h3 class="title is-5" style="margin-top: 1.4rem; margin-bottom: 0.4rem;">State Space</h3>
-        <p>
-          At each control step the agent observes a <strong>10-dimensional state vector</strong>:
-        </p>
-
-        <!-- State space table -->
-        <div class="table-container" style="margin-top: 0.75rem; margin-bottom: 0.75rem;">
-          <table class="table is-bordered is-striped is-hoverable is-fullwidth is-size-6">
-            <thead>
-              <tr>
-                <th style="width: 14%;">Dimensions</th>
-                <th style="width: 22%;">Feature</th>
-                <th>Description</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td><code>[0:3]</code></td>
-                <td><code>ref_pos</code></td>
-                <td>Current paddle face position (x, y, z) in metres</td>
-              </tr>
-              <tr>
-                <td><code>[3:6]</code></td>
-                <td><code>ref_euler</code></td>
-                <td>Current paddle face orientation as Euler angles (roll, pitch, yaw) in radians</td>
-              </tr>
-              <tr>
-                <td><code>[6:8]</code></td>
-                <td><code>landing_xy</code></td>
-                <td>Most recent ball landing position on the table (x, y)</td>
-              </tr>
-              <tr>
-                <td><code>[8:10]</code></td>
-                <td><code>target − landing</code></td>
-                <td>2D error vector from last landing to the target landing point</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <p>
-          Internally, orientation is maintained and composed as quaternions to avoid gimbal lock;
-          the Euler representation is used only for the observation.
-        </p>
-
-        <h3 class="title is-5" style="margin-top: 1.4rem; margin-bottom: 0.4rem;">Action Space</h3>
-        <p>
-          The policy outputs a <strong>6-dimensional continuous action vector</strong> representing
-          a residual correction to the current paddle pose:
-        </p>
-
-        <!-- Action space table -->
-        <div class="table-container" style="margin-top: 0.75rem; margin-bottom: 0.75rem;">
-          <table class="table is-bordered is-striped is-hoverable is-fullwidth is-size-6">
-            <thead>
-              <tr>
-                <th style="width: 14%;">Dimensions</th>
-                <th style="width: 22%;">Feature</th>
-                <th>Physical bound</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td><code>[0:3]</code></td>
-                <td><code>delta_pos</code></td>
-                <td>Position offset ±0.05 m per axis</td>
-              </tr>
-              <tr>
-                <td><code>[3:6]</code></td>
-                <td><code>delta_euler</code></td>
-                <td>Euler angle offset ±[0.18, 0.22, 0.30] rad (roll, pitch, yaw)</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <p>
-          Actions are output in a normalized [−1, +1] range and rescaled to physical units
-          inside the environment. The resulting orientation delta is applied via
-          <strong>quaternion multiplication</strong> onto the current reference quaternion,
-          then converted back to Euler angles before being passed to the IK solver.
-        </p>
-
-        <h3 class="title is-5" style="margin-top: 1.4rem; margin-bottom: 0.4rem;">Reward Function</h3>
-        <p>
-          Each episode consists of up to <strong>5 sub-steps</strong> targeting the same landing
-          point, allowing the policy to iteratively refine its serve.
-          The reward at each sub-step is:
-        </p>
-        <p style="text-align: center; font-size: 1.05rem; margin: 0.8rem 0;">
-          \(r = r_{\text{status}} + r_{\text{action}}\)
-        </p>
-        <ul>
-          <li>
-            <strong>Legal serve reward (dense):</strong> when the ball lands legally on the
-            opponent's half,
-            \(r_{\text{status}} = 2 - \lVert\text{landing} - \text{target}\rVert_2\).
-            This provides a continuous signal proportional to landing accuracy.
-          </li>
-          <li>
-            <strong>Illegal penalty (sparse):</strong>
-            \(r_{\text{status}} = -5.0 \times f\), where \(f = 1.2\) for a complete miss
-            and \(f = 0.05\) for insufficient bounces or indeterminate outcomes.
-          </li>
-          <li>
-            <strong>Action regularization (optional):</strong>
-            \(r_{\text{action}} = -w \cdot \lVert a \rVert^2\), penalizing large residual
-            corrections to discourage unnecessary pose drift.
-          </li>
-        </ul>
-
       </div>
+
+      <!-- A/B split panels -->
+      <div class="columns is-desktop" style="margin-top: 1rem; align-items: flex-start;">
+
+        <!-- ── Strategy A ── -->
+        <div class="column">
+          <div style="border: 2px solid #3273dc; border-radius: 10px; padding: 1.4rem 1.2rem; background: #f5f8ff; height: 100%;">
+
+            <p style="font-weight: 700; font-size: 1rem; color: #2563eb; margin-bottom: 1rem; border-bottom: 1px solid #c5d8f8; padding-bottom: 0.5rem;">
+              Strategy A — RL after Supervised Learning (BC → PPO)
+            </p>
+
+            <p style="font-weight: 600; margin-bottom: 0.3rem;">Network Initialization</p>
+            <p style="font-size: 0.9rem;">
+              MLP architecture: <strong>160 → 300 → 300 → 80</strong>
+              (<code>log_std_init = −2.0</code>).<br>
+              <strong>Actor only</strong> (<code>policy_net</code> + <code>action_net</code>)
+              is loaded from the BC checkpoint.<br>
+              <strong>Critic</strong> (<code>value_net</code>) is
+              <strong>randomly initialized</strong>.<br>
+              First 1,000 steps: actor frozen, critic trains alone to warm up the value baseline.
+              Then both networks fine-tune freely via PPO.
+            </p>
+
+            <p style="font-weight: 600; margin-top: 1rem; margin-bottom: 0.3rem;">State Space (10D)</p>
+            <div class="table-container">
+              <table class="table is-bordered is-striped is-hoverable is-fullwidth is-size-7" style="margin-bottom: 0;">
+                <thead>
+                  <tr><th>Dim</th><th>Feature</th><th>Description</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td><code>[0:3]</code></td><td><code>ref_pos</code></td><td>Paddle face position (x, y, z) in m</td></tr>
+                  <tr><td><code>[3:6]</code></td><td><code>ref_euler</code></td><td>Paddle orientation (roll, pitch, yaw) in rad</td></tr>
+                  <tr><td><code>[6:8]</code></td><td><code>landing_xy</code></td><td>Last ball landing position (x, y)</td></tr>
+                  <tr><td><code>[8:10]</code></td><td><code>target − landing</code></td><td>2D error to target landing point</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p style="font-size: 0.8rem; color: #666; margin-top: 0.3rem;">
+              Orientation composed internally as quaternions; Euler used only for observation.
+            </p>
+
+            <p style="font-weight: 600; margin-top: 1rem; margin-bottom: 0.3rem;">Action Space (6D) — Residual Pose Correction</p>
+            <div class="table-container">
+              <table class="table is-bordered is-striped is-hoverable is-fullwidth is-size-7" style="margin-bottom: 0;">
+                <thead>
+                  <tr><th>Dim</th><th>Feature</th><th>Physical bound</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td><code>[0:3]</code></td><td><code>delta_pos</code></td><td>±0.05 m per axis</td></tr>
+                  <tr><td><code>[3:6]</code></td><td><code>delta_euler</code></td><td>±[0.18, 0.22, 0.30] rad (r, p, y)</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p style="font-size: 0.8rem; color: #666; margin-top: 0.3rem;">
+              Normalized [−1, +1] → rescaled to physical units.
+              Orientation delta applied via quaternion multiplication; result passed to Lula IK solver.
+            </p>
+
+          </div>
+        </div>
+
+        <!-- ── Strategy B ── -->
+        <div class="column">
+          <div style="border: 2px dashed #ff9f43; border-radius: 10px; padding: 1.4rem 1.2rem; background: #fffbf5; height: 100%;">
+
+            <p style="font-weight: 700; font-size: 1rem; color: #e67e22; margin-bottom: 1rem; border-bottom: 1px solid #ffd591; padding-bottom: 0.5rem;">
+              Strategy B — RL from Scratch
+            </p>
+
+            <p style="font-weight: 600; margin-bottom: 0.3rem;">Network Initialization</p>
+            <div style="background: #fff3e0; border: 1px dashed #ffb347; border-radius: 6px; padding: 0.75rem; font-size: 0.88rem; color: #888; min-height: 80px;">
+              [ To be filled ]
+            </div>
+
+            <p style="font-weight: 600; margin-top: 1rem; margin-bottom: 0.3rem;">State Space</p>
+            <div style="background: #fff3e0; border: 1px dashed #ffb347; border-radius: 6px; padding: 0.75rem; font-size: 0.88rem; color: #888; min-height: 80px;">
+              [ To be filled ]
+            </div>
+
+            <p style="font-weight: 600; margin-top: 1rem; margin-bottom: 0.3rem;">Action Space</p>
+            <div style="background: #fff3e0; border: 1px dashed #ffb347; border-radius: 6px; padding: 0.75rem; font-size: 0.88rem; color: #888; min-height: 80px;">
+              [ To be filled ]
+            </div>
+
+          </div>
+        </div>
+
+      </div><!-- end columns -->
+
+      <!-- Shared: Reward Function -->
+      <div style="margin-top: 2rem; border: 2px solid #aaa; border-radius: 10px; padding: 1.4rem 1.2rem; background: #fafafa;">
+        <p style="font-weight: 700; font-size: 1rem; color: #363636; margin-bottom: 0.8rem; border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">
+          Reward Function — Shared by Both Strategies
+        </p>
+        <div class="content has-text-justified">
+          <p>
+            Each episode consists of up to <strong>5 sub-steps</strong> targeting the same landing
+            point, allowing the policy to iteratively refine its serve.
+            The reward at each sub-step is:
+          </p>
+          <p style="text-align: center; font-size: 1.05rem; margin: 0.6rem 0;">
+            \(r = r_{\text{status}} + r_{\text{action}}\)
+          </p>
+          <ul style="margin-top: 0.5rem;">
+            <li>
+              <strong>Legal serve reward (dense):</strong> when the ball lands legally on the
+              opponent's half,
+              \(r_{\text{status}} = 2 - \lVert\text{landing} - \text{target}\rVert_2\).
+            </li>
+            <li>
+              <strong>Illegal penalty (sparse):</strong>
+              \(r_{\text{status}} = -5.0 \times f\), where \(f = 1.2\) for a complete miss
+              and \(f = 0.05\) for insufficient bounces or indeterminate outcomes.
+            </li>
+            <li>
+              <strong>Action regularization (optional):</strong>
+              \(r_{\text{action}} = -w \cdot \lVert a \rVert^2\), penalizing large residual
+              corrections to discourage unnecessary pose drift.
+            </li>
+          </ul>
+        </div>
+      </div>
+
     </div>
   </section>
   <!-- End RL Framework -->
@@ -558,101 +556,105 @@
       <h2 class="title is-3 has-text-centered">System Architecture</h2>
       <div class="content has-text-justified">
         <p>
-          The system follows a closed-loop data-flow architecture with three main components:
-          the <strong>Isaac Sim environment</strong>, the <strong>policy network</strong>, and
-          the <strong>pose controller</strong>.
+          Both strategies share the same Isaac Sim simulation environment but differ in
+          their observation space, action representation, and low-level controller.
         </p>
       </div>
 
-      <!-- Vertical data-flow diagram -->
-      <div style="max-width: 420px; margin: 1.5rem auto 0;">
+      <!-- A/B side-by-side diagrams -->
+      <div class="columns is-desktop" style="margin-top: 1rem; align-items: flex-start;">
 
-        <!-- Box 1: Isaac Sim -->
-        <div style="
-          border: 2px solid #363636; border-radius: 8px;
-          padding: 0.9rem 1rem; text-align: center;
-          background: #fff;
-        ">
-          <p style="font-weight: 700; margin-bottom: 0.25rem;">Isaac Sim</p>
-          <p class="is-size-7 has-text-grey" style="margin: 0;">Physics simulator &nbsp;·&nbsp; Ball + robot dynamics</p>
+        <!-- ── Strategy A ── -->
+        <div class="column">
+          <div style="border: 2px solid #3273dc; border-radius: 10px; padding: 1.2rem 1rem; background: #f5f8ff;">
+            <p style="font-weight: 700; font-size: 0.95rem; color: #2563eb; text-align: center; margin-bottom: 1rem; border-bottom: 1px solid #c5d8f8; padding-bottom: 0.5rem;">
+              Strategy A — BC → PPO
+            </p>
+
+            <!-- Vertical flow -->
+            <div style="max-width: 300px; margin: 0 auto;">
+              <div style="border: 2px solid #555; border-radius: 6px; padding: 0.6rem; text-align: center; background: #fff;">
+                <p style="font-weight: 700; font-size: 0.85rem; margin: 0;">Isaac Sim</p>
+                <p class="is-size-7 has-text-grey" style="margin: 0;">Physics simulator · Ball + robot dynamics</p>
+              </div>
+              <div style="text-align: center; font-size: 1.2rem; color: #555; line-height: 1.5;">↓</div>
+              <div style="border: 2px solid #3273dc; border-radius: 6px; padding: 0.6rem; text-align: center; background: #eff5fb;">
+                <p style="font-weight: 700; font-size: 0.85rem; margin: 0;">Observation (10D)</p>
+                <p class="is-size-7 has-text-grey" style="margin: 0;">ref_pos (3D) + ref_euler (3D)<br>landing_xy (2D) + error (2D)</p>
+              </div>
+              <div style="text-align: center; font-size: 1.2rem; color: #555; line-height: 1.5;">↓</div>
+              <div style="border: 2px solid #23d160; border-radius: 6px; padding: 0.6rem; text-align: center; background: #effbf4;">
+                <p style="font-weight: 700; font-size: 0.85rem; margin: 0;">Policy MLP (BC-init)</p>
+                <p class="is-size-7 has-text-grey" style="margin: 0;">PPO actor–critic<br>Outputs delta action (6D)</p>
+              </div>
+              <div style="text-align: center; font-size: 1.2rem; color: #555; line-height: 1.5;">↓</div>
+              <div style="border: 2px solid #ff3860; border-radius: 6px; padding: 0.6rem; text-align: center; background: #fff0f3;">
+                <p style="font-weight: 700; font-size: 0.85rem; margin: 0;">Pose Controller</p>
+                <p class="is-size-7 has-text-grey" style="margin: 0;">Rescale → pos += Δpos<br>quat ⊗ Δquat → euler<br>→ Lula IK solver</p>
+              </div>
+              <div style="text-align: center; margin-top: 0.5rem; color: #7a7a7a; font-size: 0.78rem;">
+                ↑ Reward &amp; next state → PPO update ↑
+              </div>
+            </div>
+
+            <p class="is-size-7 has-text-grey has-text-centered" style="margin-top: 0.75rem;">
+              Figure 2a: Strategy A data flow.
+            </p>
+            <p style="font-size: 0.85rem; margin-top: 0.75rem; color: #444;">
+              At each sub-step, Isaac Sim returns a 10D observation (paddle pose + landing
+              feedback). The BC-initialized actor outputs a 6D residual delta, which is
+              rescaled and composed via quaternion multiplication onto the current reference
+              pose before being passed to the Lula IK solver.
+              Episodes consist of up to <strong>5 sub-steps</strong>; once
+              <code>n_steps × num_envs</code> transitions are collected, PPO runs
+              mini-batch gradient descent on the rollout buffer.
+            </p>
+          </div>
         </div>
 
-        <!-- Arrow down -->
-        <div style="text-align: center; font-size: 1.4rem; color: #363636; line-height: 1.6;">↓</div>
+        <!-- ── Strategy B ── -->
+        <div class="column">
+          <div style="border: 2px dashed #ff9f43; border-radius: 10px; padding: 1.2rem 1rem; background: #fffbf5;">
+            <p style="font-weight: 700; font-size: 0.95rem; color: #e67e22; text-align: center; margin-bottom: 1rem; border-bottom: 1px dashed #ffd591; padding-bottom: 0.5rem;">
+              Strategy B — RL from Scratch
+            </p>
 
-        <!-- Box 2: Observation -->
-        <div style="
-          border: 2px solid #3273dc; border-radius: 8px;
-          padding: 0.9rem 1rem; text-align: center;
-          background: #eff5fb;
-        ">
-          <p style="font-weight: 700; margin-bottom: 0.25rem;">Observation (10D)</p>
-          <p class="is-size-7 has-text-grey" style="margin: 0;">
-            ref_pos (3D) &nbsp;+&nbsp; ref_euler (3D)<br>
-            landing_xy (2D) &nbsp;+&nbsp; error (2D)
-          </p>
+            <!-- Placeholder flow -->
+            <div style="max-width: 300px; margin: 0 auto;">
+              <div style="border: 2px solid #555; border-radius: 6px; padding: 0.6rem; text-align: center; background: #fff;">
+                <p style="font-weight: 700; font-size: 0.85rem; margin: 0;">Isaac Sim</p>
+                <p class="is-size-7 has-text-grey" style="margin: 0;">Physics simulator · Ball + robot dynamics</p>
+              </div>
+              <div style="text-align: center; font-size: 1.2rem; color: #555; line-height: 1.5;">↓</div>
+              <div style="border: 2px dashed #ffb347; border-radius: 6px; padding: 0.6rem; text-align: center; background: #fff3e0; min-height: 56px;">
+                <p style="font-weight: 700; font-size: 0.85rem; margin: 0; color: #888;">Observation (? D)</p>
+                <p class="is-size-7" style="margin: 0; color: #bbb;">[ To be filled ]</p>
+              </div>
+              <div style="text-align: center; font-size: 1.2rem; color: #555; line-height: 1.5;">↓</div>
+              <div style="border: 2px dashed #ffb347; border-radius: 6px; padding: 0.6rem; text-align: center; background: #fff3e0; min-height: 56px;">
+                <p style="font-weight: 700; font-size: 0.85rem; margin: 0; color: #888;">Policy (random init)</p>
+                <p class="is-size-7" style="margin: 0; color: #bbb;">[ To be filled ]</p>
+              </div>
+              <div style="text-align: center; font-size: 1.2rem; color: #555; line-height: 1.5;">↓</div>
+              <div style="border: 2px dashed #ffb347; border-radius: 6px; padding: 0.6rem; text-align: center; background: #fff3e0; min-height: 56px;">
+                <p style="font-weight: 700; font-size: 0.85rem; margin: 0; color: #888;">Controller</p>
+                <p class="is-size-7" style="margin: 0; color: #bbb;">[ To be filled ]</p>
+              </div>
+              <div style="text-align: center; margin-top: 0.5rem; color: #7a7a7a; font-size: 0.78rem;">
+                ↑ Reward &amp; next state → PPO update ↑
+              </div>
+            </div>
+
+            <p class="is-size-7 has-text-grey has-text-centered" style="margin-top: 0.75rem;">
+              Figure 2b: Strategy B data flow.
+            </p>
+            <div style="background: #fff3e0; border: 1px dashed #ffb347; border-radius: 6px; padding: 0.75rem; font-size: 0.85rem; color: #888; margin-top: 0.75rem; min-height: 80px;">
+              [ Description to be filled ]
+            </div>
+          </div>
         </div>
 
-        <!-- Arrow down -->
-        <div style="text-align: center; font-size: 1.4rem; color: #363636; line-height: 1.6;">↓</div>
-
-        <!-- Box 3: Policy -->
-        <div style="
-          border: 2px solid #23d160; border-radius: 8px;
-          padding: 0.9rem 1rem; text-align: center;
-          background: #effbf4;
-        ">
-          <p style="font-weight: 700; margin-bottom: 0.25rem;">Policy (MLP)</p>
-          <p class="is-size-7 has-text-grey" style="margin: 0;">
-            PPO actor–critic<br>
-            Outputs delta action (6D)
-          </p>
-        </div>
-
-        <!-- Arrow down -->
-        <div style="text-align: center; font-size: 1.4rem; color: #363636; line-height: 1.6;">↓</div>
-
-        <!-- Box 4: Pose Controller -->
-        <div style="
-          border: 2px solid #ff3860; border-radius: 8px;
-          padding: 0.9rem 1rem; text-align: center;
-          background: #fff0f3;
-        ">
-          <p style="font-weight: 700; margin-bottom: 0.25rem;">Pose Controller</p>
-          <p class="is-size-7 has-text-grey" style="margin: 0;">
-            Rescale [−1, +1] → physical units<br>
-            pos += delta_pos &nbsp;·&nbsp; quat ⊗ delta_quat → euler<br>
-            Send to Lula IK solver
-          </p>
-        </div>
-
-        <!-- Feedback label -->
-        <div style="text-align: center; margin-top: 0.7rem; color: #7a7a7a; font-size: 0.82rem;">
-          ↑ &nbsp;Reward &amp; next state fed back to PPO update loop&nbsp; ↑
-        </div>
-
-        <p class="is-size-6 has-text-grey has-text-centered" style="margin-top: 0.75rem;">
-          Figure 2: Data flow — Isaac Sim → observation → PPO policy → pose controller → Isaac Sim.
-        </p>
-      </div>
-
-      <div class="content has-text-justified" style="margin-top: 1.75rem;">
-        <p>
-          At each sub-step, Isaac Sim provides the current paddle pose and last ball landing
-          position as a <strong>10-dimensional observation</strong> to the policy network.
-          The actor MLP outputs a 6-dimensional normalized residual action — a position offset
-          and an Euler angle offset — which is rescaled to physical units and composed onto the
-          current reference pose via <strong>quaternion multiplication</strong>.
-          The resulting absolute pose is forwarded to the <strong>Lula inverse kinematics
-          solver</strong> to drive the UR10 arm.
-          After execution, Isaac Sim steps forward, computes the reward, and returns the next
-          observation. Each episode consists of up to <strong>5 such sub-steps</strong> targeting
-          the same landing point, allowing the policy to iteratively refine its serve.
-          Collected transitions are stored in a rollout buffer; once
-          <code>n_steps × num_envs</code> steps are reached, PPO performs several epochs of
-          mini-batch gradient descent before the next rollout begins.
-        </p>
-      </div>
+      </div><!-- end columns -->
 
     </div>
   </section>
@@ -710,7 +712,7 @@
         <!-- Strategy B: Scratch -->
         <div class="column is-half">
           <div style="
-            border: 2px solid #ff9f43;
+            border: 2px dashed #ff9f43;
             border-radius: 10px;
             padding: 1.25rem 1rem;
             background: #fffbf5;
@@ -719,61 +721,80 @@
             <p style="font-weight: 700; font-size: 1rem; margin-bottom: 0.6rem; color: #e67e22;">
               Strategy B — RL from Scratch
             </p>
-            <ol style="margin-left: 1.1rem; font-size: 0.9rem; color: #363636;">
-              <li>Random policy initialization (<code>log_std_init = −2.0</code>)</li>
-              <li>PPO rollout collection in Isaac Sim</li>
-              <li>Reward: legal landing accuracy + illegal penalties</li>
-              <li>Repeat until convergence</li>
-            </ol>
-            <p style="font-size: 0.85rem; color: #7a7a7a; margin-top: 0.75rem;">
-              No prior knowledge is used. The policy must discover a valid serving pose entirely
-              through trial-and-error exploration. Because legal ball contact requires precise
-              paddle orientation within a narrow feasible region, convergence is slow and heavily
-              dependent on the initial exploration budget.
-            </p>
+            <p style="font-size: 0.85rem; color: #aaa; margin-bottom: 0.5rem;">Steps:</p>
+            <div style="background: #fff3e0; border: 1px dashed #ffb347; border-radius: 6px; padding: 0.75rem; font-size: 0.88rem; color: #888; min-height: 120px; margin-bottom: 0.75rem;">
+              [ To be filled ]
+            </div>
+            <p style="font-size: 0.85rem; color: #aaa; margin-bottom: 0.5rem;">Description:</p>
+            <div style="background: #fff3e0; border: 1px dashed #ffb347; border-radius: 6px; padding: 0.75rem; font-size: 0.88rem; color: #888; min-height: 60px;">
+              [ To be filled ]
+            </div>
           </div>
         </div>
 
       </div>
 
-      <!-- Pipeline diagram for Strategy A -->
-      <div class="has-text-centered" style="margin-top: 1.75rem;">
-        <figure class="image">
-          <img src="static/images/training_pipeline.jpg"
-               alt="Strategy A pipeline: Demonstration Data → Behavior Cloning (MLP 160→300→300→80) → Weight Transfer → Critic Warm-up → PPO Fine-tuning → Final Serving Policy"
-               loading="lazy"
-               style="max-width: 720px; width: 100%; margin: 0 auto; display: block; border-radius: 4px;">
-        </figure>
-        <p class="is-size-6 has-text-grey" style="margin-top: 0.5rem;">
-          Figure 4: Detailed pipeline for Strategy A — SEAL teleoperation data →
-          Behavior Cloning pre-training → weight transfer to PPO actor →
-          critic warm-up → PPO fine-tuning in Isaac Sim.
-        </p>
-        <!-- Diagram label clarification -->
-        <div style="
-          display: inline-block;
-          margin-top: 0.75rem;
-          padding: 0.65rem 1rem;
-          background: #fffbe6;
-          border: 1px solid #ffe58f;
-          border-radius: 6px;
-          text-align: left;
-          max-width: 680px;
-        ">
-          <p class="is-size-7" style="margin: 0 0 0.3rem; font-weight: 600; color: #856404;">
-            Note on diagram labels
+      <!-- Pipeline diagrams side by side -->
+      <div class="columns is-desktop" style="margin-top: 1.75rem; align-items: flex-start;">
+
+        <!-- Strategy A diagram -->
+        <div class="column">
+          <p style="font-weight: 700; font-size: 0.95rem; color: #2563eb; text-align: center; margin-bottom: 0.6rem;">
+            Strategy A — BC → PPO Pipeline
           </p>
-          <p class="is-size-7" style="margin: 0 0 0.25rem; color: #555;">
-            <strong>"Behavior Cloning as Policy Initialization"</strong> —
-            BC weights provide a one-time warm start; no BC loss is added during PPO training.
-            PPO fine-tunes the actor freely thereafter.
+          <figure class="image">
+            <img src="static/images/training_pipeline.jpg"
+                 alt="Strategy A pipeline: Demonstration Data → Behavior Cloning (MLP 160→300→300→80) → Weight Transfer → Critic Warm-up → PPO Fine-tuning"
+                 loading="lazy"
+                 style="width: 100%; border-radius: 4px; border: 2px solid #c5d8f8;">
+          </figure>
+          <p class="is-size-6 has-text-grey has-text-centered" style="margin-top: 0.5rem;">
+            Figure 4a: Strategy A — SEAL data → BC pre-training → actor weight transfer →
+            critic warm-up → PPO fine-tuning.
           </p>
-          <p class="is-size-7" style="margin: 0; color: #555;">
-            <strong>"Byproduct"</strong> —
-            PPO continuously collects new on-policy rollouts, replacing the static BC dataset
-            with live interaction data.
-          </p>
+          <div style="
+            margin-top: 0.6rem;
+            padding: 0.6rem 0.9rem;
+            background: #fffbe6;
+            border: 1px solid #ffe58f;
+            border-radius: 6px;
+          ">
+            <p class="is-size-7" style="margin: 0 0 0.25rem; font-weight: 600; color: #856404;">Note on diagram labels</p>
+            <p class="is-size-7" style="margin: 0 0 0.2rem; color: #555;">
+              <strong>"Behavior Cloning as Policy Initialization"</strong> — BC weights are a one-time warm start; no BC loss during PPO training.
+            </p>
+            <p class="is-size-7" style="margin: 0; color: #555;">
+              <strong>"Byproduct"</strong> — PPO collects new on-policy rollouts, replacing the static BC dataset with live interaction data.
+            </p>
+          </div>
         </div>
+
+        <!-- Strategy B diagram placeholder -->
+        <div class="column">
+          <p style="font-weight: 700; font-size: 0.95rem; color: #e67e22; text-align: center; margin-bottom: 0.6rem;">
+            Strategy B — RL from Scratch Pipeline
+          </p>
+          <div style="
+            width: 100%; border-radius: 4px;
+            border: 2px dashed #ffb347;
+            background: #fff3e0;
+            display: flex; align-items: center; justify-content: center;
+            min-height: 260px; color: #bbb; font-size: 0.9rem;
+          ">
+            [ Pipeline diagram — to be filled ]
+          </div>
+          <p class="is-size-6 has-text-grey has-text-centered" style="margin-top: 0.5rem;">
+            Figure 4b: Strategy B pipeline.
+          </p>
+          <div style="
+            margin-top: 0.6rem; padding: 0.6rem 0.9rem;
+            background: #fff3e0; border: 1px dashed #ffb347; border-radius: 6px;
+            min-height: 60px; color: #bbb; font-size: 0.85rem;
+          ">
+            [ Description — to be filled ]
+          </div>
+        </div>
+
       </div>
 
       <div class="content has-text-justified" style="margin-top: 1.25rem;">
