@@ -214,31 +214,31 @@
       <h2 class="title is-3 has-text-centered">Simulation Environment</h2>
       <div class="content has-text-justified">
         <p>
-          All experiments are conducted in <strong>NVIDIA Isaac Sim</strong>, a physics-based
-          robotics simulation platform. The environment is designed to comply with
-          <strong>ITTF (International Table Tennis Federation)</strong> standards: the table
-          dimensions, net height, and ball properties follow the official specifications to
-          ensure that any learned serving behavior is grounded in realistic physical conditions.
+          All experiments in this project are conducted in
+          <strong>NVIDIA Isaac Sim</strong>, a physics-based robotics simulation platform.
+          The table dimensions, net height, and ball properties are set to match
+          <strong>ITTF (International Table Tennis Federation)</strong> specifications,
+          providing a standardized physical setup for training and evaluation.
         </p>
         <p>
-          The robot arm used is a <strong>Universal Robots UR10</strong>, a 6-DOF industrial
-          manipulator equipped with a table tennis paddle as the end-effector.
-          The UR10 is mounted at one end of the table and is tasked with generating a full
-          serving motion — swinging the paddle to strike the ball and direct it onto the
-          opposite side of the table. The coordinate frame is aligned with the table surface,
-          with the X/Y axes along the table plane and Z pointing upward.
+          The robot used is a <strong>Universal Robots UR10</strong>, a 6-DOF industrial
+          manipulator. A table tennis paddle is attached as the end-effector, and the
+          arm is positioned at one end of the table. The coordinate frame is aligned
+          with the table surface: the X and Y axes lie in the table plane, and Z points
+          upward, as shown in the figure below.
         </p>
       </div>
       <div class="has-text-centered" style="margin-top: 1.5rem;">
         <figure class="image">
           <img src="static/images/isaac_env.png"
-               alt="Isaac Sim environment showing a UR10 robot arm with paddle end-effector positioned beside an ITTF-standard table tennis table"
+               alt="Isaac Sim simulation environment: UR10 robot arm with paddle end-effector beside an ITTF-standard table tennis table, with X/Y/Z coordinate axes shown"
                loading="lazy"
                style="max-width: 720px; margin: 0 auto; display: block; border-radius: 6px;">
         </figure>
         <p class="is-size-6 has-text-grey" style="margin-top: 0.5rem;">
-          Figure 1: Isaac Sim simulation environment — UR10 robot with end-effector paddle
-          and ITTF-standard table tennis table.
+          Figure 1: Simulation setup in Isaac Sim — UR10 robot arm with paddle end-effector
+          and an ITTF-standard table. The coordinate axes (X, Y, Z) are defined relative
+          to the table surface.
         </p>
       </div>
     </div>
@@ -252,36 +252,40 @@
       <h2 class="title is-3 has-text-centered">Method Overview</h2>
       <div class="content has-text-justified">
         <p>
-          Our approach follows a standard model-free RL loop applied to a robotic serving task.
-          The high-level workflow consists of five stages:
+          This project applies model-free reinforcement learning to the problem of
+          table tennis robot serving in simulation.
+          The overall approach consists of five stages, each described in more detail
+          in the sections that follow.
         </p>
         <ol>
           <li>
-            <strong>Robot and Environment Setup.</strong>&nbsp;
-            A robotic arm equipped with a table tennis paddle is placed in a simulated environment
-            modeled after a standard table tennis table. The simulator handles rigid-body dynamics,
-            contact forces, and ball trajectories.
+            <strong>Environment Setup.</strong>&nbsp;
+            A UR10 robot arm with a paddle end-effector is placed in an Isaac Sim
+            environment modeled to ITTF specifications.
+            The simulator provides rigid-body physics, contact dynamics, and ball flight.
           </li>
           <li>
             <strong>State Observation.</strong>&nbsp;
-            At each timestep, the agent receives a state vector that encodes the current joint angles
-            and velocities of the robot arm, the position and velocity of the ball, and the distance
-            between the paddle and the ball.
+            At each timestep, the agent receives a compact state vector encoding
+            the robot's current joint configuration and the ball's position and velocity.
           </li>
           <li>
-            <strong>Policy Action Output.</strong>&nbsp;
-            The policy network outputs target joint velocities or torques for each controllable joint.
-            Actions are bounded to safe operating ranges to prevent joint limit violations.
+            <strong>Policy Action.</strong>&nbsp;
+            A neural network policy maps the observed state to a joint-space action.
+            The output is clipped to safe operating limits before being sent to the
+            low-level controller.
           </li>
           <li>
             <strong>Reward Calculation.</strong>&nbsp;
-            A shaped reward signal is computed after each action, combining terms for ball-contact
-            success, launch trajectory quality, and landing position accuracy.
+            A shaped reward signal provides feedback on ball contact, ball trajectory,
+            and landing position, guiding the policy toward successful serving behavior.
           </li>
           <li>
-            <strong>Policy Update via RL.</strong>&nbsp;
-            Collected trajectories are used to update the policy parameters using PPO, iterating
-            until the episodic return converges or a fixed training budget is exhausted.
+            <strong>Policy Update.</strong>&nbsp;
+            Rollouts collected from the environment are used to update the policy via PPO.
+            We evaluate two initialization strategies — training from scratch and
+            fine-tuning from a supervised pre-trained policy — and compare their
+            training dynamics and final performance.
           </li>
         </ol>
       </div>
@@ -294,24 +298,30 @@
   <section class="section hero is-light">
     <div class="container is-max-desktop">
       <h2 class="title is-3 has-text-centered">
-        Reference: SEAL — Sample-Efficient Adjustment-Learning
+        Reference Work: SEAL
       </h2>
       <div class="content has-text-justified">
         <p>
-          As a key reference for this project, we study
-          <strong>SEAL (Sample-Efficient Adjustment-Learning Method for Table Tennis Robot Serve)</strong>,
-          presented at ICRA 2025
-          (<a href="https://ieeexplore.ieee.org/document/11128201" target="_blank">IEEE Xplore</a> ·
-          <a href="https://www.youtube.com/watch?v=iSis7VrlxJc" target="_blank">Video overview</a>).
-          SEAL demonstrates a practical pipeline for learning table tennis serving policies in
-          simulation with high sample efficiency, leveraging an Isaac-based physics environment
-          that accurately models ball–paddle contact and flight trajectories.
+          A primary reference for this project is
+          <strong>SEAL: A Sample-Efficient Adjustment-Learning Method for Table Tennis
+          Robot Serve</strong> (Guo et al., ICRA 2025 ·
+          <a href="https://ieeexplore.ieee.org/document/11128201" target="_blank">IEEE Xplore</a> ·
+          <a href="https://www.youtube.com/watch?v=iSis7VrlxJc" target="_blank">video</a>).
+          SEAL is an independent prior work, not a contribution of this project.
+          We refer to it here because it addresses a closely related task — learning a
+          table tennis serving policy in an Isaac-based simulation — and its published
+          results support the feasibility of using Isaac Sim for this class of robotic
+          table tennis experiments.
         </p>
         <p>
-          A key motivation for consulting SEAL is to <strong>verify that the Isaac simulation
-          environment can successfully run a table tennis serving task</strong>. The results from SEAL
-          confirm that Isaac provides sufficiently realistic dynamics for training serving
-          policies, which informs the choice of simulator for our own RL experiments.
+          Specifically, SEAL's use of an Isaac-based physics environment for modeling
+          ball–paddle contact and flight trajectories informed our choice of Isaac Sim
+          as the simulator for our own RL experiments. In addition, the teleoperation
+          trajectories collected in SEAL serve as demonstration data for the
+          Behavior Cloning pre-training stage of our
+          <em>RL after Supervised Learning</em> condition (Strategy B).
+          The videos and figure below are taken from SEAL's original results and are
+          included solely to provide context.
         </p>
       </div>
 
@@ -324,7 +334,8 @@
             Your browser does not support the video tag.
           </video>
           <p class="is-size-6 has-text-grey" style="margin-top: 0.4rem;">
-            SEAL: learned serving policy rollout.
+            SEAL's learned serving policy rollout in Isaac Sim
+            (Guo et al., ICRA 2025). <em>This is not our result.</em>
           </p>
         </div>
         <div class="column is-half has-text-centered">
@@ -334,7 +345,8 @@
             Your browser does not support the video tag.
           </video>
           <p class="is-size-6 has-text-grey" style="margin-top: 0.4rem;">
-            End-effector teleoperation used for data collection in SEAL.
+            End-effector teleoperation used for demonstration data collection in SEAL.
+            These trajectories are reused as Behavior Cloning training data in our Strategy B.
           </p>
         </div>
       </div>
@@ -343,14 +355,15 @@
       <div class="has-text-centered" style="margin-top: 1.5rem;">
         <figure class="image">
           <img src="static/images/landing_distribution_6D.png"
-               alt="Landing distribution of the SEAL method showing ball landing positions in 6-DOF serving experiments"
+               alt="Ball landing distribution from SEAL's 6-DOF serving experiments, showing target landing positions on the table (Guo et al., ICRA 2025)"
                loading="lazy"
                style="max-width: 680px; margin: 0 auto; display: block; border-radius: 4px;">
         </figure>
         <p class="is-size-6 has-text-grey" style="margin-top: 0.5rem;">
-          Figure: Ball landing distribution from SEAL's 6-DOF serving experiments
+          Ball landing distribution from SEAL's 6-DOF serving experiments
           (reproduced from
           <a href="https://ieeexplore.ieee.org/document/11128201" target="_blank">Guo et al., ICRA 2025</a>).
+          Shown here as a reference for the task difficulty and target landing zone.
         </p>
       </div>
 
