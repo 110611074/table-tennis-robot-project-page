@@ -193,26 +193,30 @@
           <h2 class="title is-3">Abstract</h2>
           <div class="content has-text-justified">
             <p>
-              This project investigates the use of reinforcement learning (RL) for table tennis
-              robot serving in a physics-based simulation environment built with NVIDIA Isaac Sim.
-              We formulate the serving task as a sequential decision-making problem in which a
-              UR10 robot arm learns a policy that maps observed joint and ball states to
-              joint-space actions, trained with Proximal Policy Optimization (PPO) and a
-              shaped reward function covering ball contact, launch trajectory, and landing accuracy.
+              This project investigates simulation-based policy learning for table tennis
+              robot serving using NVIDIA Isaac Sim. We first construct an ITTF-standard
+              simulation environment with a UR10 robot arm and verify its feasibility by
+              implementing the <strong>SEAL</strong> (Sample-Efficient Adjustment-Learning,
+              Guo et al., ICRA 2025) algorithm inside the simulator, which produces a
+              Behavior Cloning (BC) baseline policy. The serving task is then formulated
+              as a sequential decision-making problem: at each sub-step the agent observes
+              a 10-dimensional state (current paddle pose and ball landing feedback) and
+              outputs a 6-dimensional residual action (position and orientation delta),
+              trained with Proximal Policy Optimization (PPO) and a reward function based
+              on legal landing accuracy.
             </p>
             <p>
-              A central aspect of the project is the comparison of two training strategies:
-              (1) <strong>RL from Scratch</strong>, where the policy is initialized randomly
-              and trained entirely by PPO, and
-              (2) <strong>RL after Supervised Learning</strong>, where a Behavior Cloning policy
-              pre-trained on teleoperation demonstration data from SEAL (Guo et al., ICRA 2025)
-              is used to initialize the PPO actor before fine-tuning.
-              Training observations indicate that RL from Scratch achieves modest but stable
-              convergence, while RL after Supervised Learning becomes unstable after the
-              pre-trained weights are unfrozen, failing to improve beyond the initial
-              supervised baseline. These findings suggest that naive PPO fine-tuning on top
-              of a BC-initialized policy does not reliably outperform training from scratch
-              under the conditions studied.
+              Starting from the verified Isaac Sim environment, we branch into two training
+              strategies: (1) <strong>RL after Supervised Learning</strong>, where the PPO
+              actor is initialized directly from SEAL's MLP weights and fine-tuned with PPO,
+              and (2) <strong>RL from Scratch</strong>, where PPO is trained from random
+              initialization without any prior. The SEAL policy serves as the performance
+              baseline for both. Training results show that RL from Scratch achieves modest
+              but stable convergence, while RL after Supervised Learning becomes unstable
+              after the pre-trained weights are unfrozen, failing to improve beyond the
+              SEAL baseline. These findings suggest that naive PPO fine-tuning on top of a
+              BC-initialized policy does not reliably outperform training from scratch under
+              the conditions studied.
             </p>
           </div>
         </div>
@@ -266,41 +270,44 @@
       <h2 class="title is-3 has-text-centered">Method Overview</h2>
       <div class="content has-text-justified">
         <p>
-          This project applies model-free reinforcement learning to the problem of
-          table tennis robot serving in simulation.
-          The overall approach consists of five stages, each described in more detail
+          The overall approach proceeds in five stages, each described in more detail
           in the sections that follow.
         </p>
         <ol>
           <li>
             <strong>Environment Setup.</strong>&nbsp;
             A UR10 robot arm with a paddle end-effector is placed in an Isaac Sim
-            environment modeled to ITTF specifications.
-            The simulator provides rigid-body physics, contact dynamics, and ball flight.
+            environment modeled to ITTF specifications. The simulator provides
+            rigid-body physics, contact dynamics, and ball flight.
           </li>
           <li>
-            <strong>State Observation.</strong>&nbsp;
-            At each timestep, the agent receives a compact state vector encoding
-            the robot's current joint configuration and the ball's position and velocity.
+            <strong>SEAL Baseline.</strong>&nbsp;
+            We implement the SEAL algorithm (Guo et al., ICRA 2025) inside Isaac Sim
+            to verify that the simulation environment correctly supports the table
+            tennis serving task. The resulting trained MLP serves as our supervised
+            <strong>baseline policy</strong> (Behavior Cloning checkpoint) against
+            which all RL results are compared.
           </li>
           <li>
-            <strong>Policy Action.</strong>&nbsp;
-            A neural network policy maps the observed state to a continuous
-            joint-space action, which is executed by the low-level controller.
-            Details of the action representation are described in the
-            Reinforcement Learning Framework section.
+            <strong>RL Problem Formulation.</strong>&nbsp;
+            The serving task is cast as a sequential decision-making problem.
+            The agent observes a 10-dimensional state (current paddle pose and
+            ball landing feedback) and outputs a 6-dimensional residual delta
+            action (position + orientation offset), rewarded by legal landing
+            accuracy. Details are given in the Reinforcement Learning Framework section.
           </li>
           <li>
-            <strong>Reward Calculation.</strong>&nbsp;
-            A shaped reward signal provides feedback on ball contact, ball trajectory,
-            and landing position, guiding the policy toward successful serving behavior.
+            <strong>Strategy A — RL after Supervised Learning (BC → PPO).</strong>&nbsp;
+            The SEAL MLP weights are transferred directly into the PPO actor.
+            After a 1,000-step critic warm-up with the actor frozen, full PPO
+            fine-tuning proceeds. This tests whether the BC prior accelerates
+            convergence beyond the SEAL baseline.
           </li>
           <li>
-            <strong>Policy Update.</strong>&nbsp;
-            Rollouts collected from the environment are used to update the policy via PPO.
-            We evaluate two initialization strategies — training from scratch and
-            fine-tuning from a supervised pre-trained policy — and compare their
-            training dynamics and final performance.
+            <strong>Strategy B — RL from Scratch.</strong>&nbsp;
+            PPO is trained from random initialization with no prior knowledge,
+            serving as the pure RL reference point. Both strategies share the
+            same hyperparameters, state/action space, and reward function.
           </li>
         </ol>
       </div>
@@ -355,8 +362,8 @@
             Your browser does not support the video tag.
           </video>
           <p class="is-size-6 has-text-grey" style="margin-top: 0.4rem;">
-            SEAL's learned serving policy executed on a <strong>real robot</strong>
-            (Guo et al., ICRA 2025). Not a result of this project.
+            Isaac-based verification of a table tennis serving algorithm.
+            (Guo et al., ICRA 2025).
           </p>
         </div>
         <div class="column is-half has-text-centered">
