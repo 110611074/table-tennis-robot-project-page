@@ -409,16 +409,14 @@
     <div class="container is-max-desktop">
       <h2 class="title is-3 has-text-centered">Reinforcement Learning Framework</h2>
 
-      <!-- Shared: PPO overview -->
+      <!-- Shared: intro -->
       <div class="content has-text-justified">
         <p>
-          Both strategies use <strong>Proximal Policy Optimization (PPO)</strong> as the core
-          RL algorithm — an on-policy actor-critic method whose clipped surrogate objective
-          limits the size of each policy gradient update. The actor outputs the mean and
-          log-standard deviation of a Gaussian distribution over the action space;
-          the critic estimates the state value for GAE-based advantage computation.
-          The two strategies differ in how the policy is initialized and what state/action
-          representation is used.
+          Both strategies share the same Isaac Sim environment, state space, action space,
+          and reward function, but use <strong>different RL algorithms and network
+          initializations</strong>. Strategy A uses PPO (on-policy, stochastic policy)
+          initialized from a BC checkpoint; Strategy B uses TD3 (off-policy, deterministic
+          policy) trained entirely from random initialization.
         </p>
       </div>
 
@@ -491,20 +489,59 @@
               Strategy B — RL from Scratch
             </p>
 
-            <p style="font-weight: 600; margin-bottom: 0.3rem;">Network Initialization</p>
-            <div style="background: #fff3e0; border: 1px dashed #ffb347; border-radius: 6px; padding: 0.75rem; font-size: 0.88rem; color: #888; min-height: 80px;">
-              [ To be filled ]
+            <p style="font-weight: 600; margin-bottom: 0.3rem;">Algorithm — PPO from Scratch</p>
+            <p style="font-size: 0.9rem;">
+              Same <strong>Proximal Policy Optimization (PPO)</strong> algorithm as Strategy A,
+              but with <strong>fully random initialization</strong> — no BC checkpoint is loaded.
+              Policy architecture: <strong>256 → 256 → 256</strong> MLP
+              (<code>log_std_init = −2.0</code>), shared for both actor (<code>pi</code>)
+              and critic (<code>vf</code>).
+            </p>
+            <p style="font-size: 0.9rem; margin-top: 0.5rem;">
+              An optional <strong>BC auxiliary loss</strong> can be enabled alongside PPO:
+              after each rollout update, <code>n_epochs</code> additional gradient steps
+              minimize <code>bc_coef × MSE(π_mean(s_demo), a_demo)</code> on CSV demo pairs,
+              anchoring the policy mean toward demonstrated actions without changing
+              <code>log_std</code>. Setting <code>--bc-coef 0</code> gives plain PPO.
+            </p>
+
+            <p style="font-weight: 600; margin-top: 1rem; margin-bottom: 0.3rem;">Network Initialization</p>
+            <p style="font-size: 0.9rem;">
+              All weights <strong>randomly initialized</strong> — no BC checkpoint is used.
+              Actor and critic share the same <strong>256 → 256 → 256</strong> trunk.
+            </p>
+
+            <p style="font-weight: 600; margin-top: 1rem; margin-bottom: 0.3rem;">State Space (10D) — same as Strategy A</p>
+            <div class="table-container">
+              <table class="table is-bordered is-striped is-hoverable is-fullwidth is-size-7" style="margin-bottom: 0;">
+                <thead>
+                  <tr><th>Dim</th><th>Feature</th><th>Description</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td><code>[0:3]</code></td><td><code>ref_pos</code></td><td>Paddle face position (x, y, z) in m</td></tr>
+                  <tr><td><code>[3:6]</code></td><td><code>ref_euler</code></td><td>Paddle orientation (roll, pitch, yaw) in rad</td></tr>
+                  <tr><td><code>[6:8]</code></td><td><code>landing_xy</code></td><td>Last ball landing position (x, y)</td></tr>
+                  <tr><td><code>[8:10]</code></td><td><code>target − landing</code></td><td>2D error to target landing point</td></tr>
+                </tbody>
+              </table>
             </div>
 
-            <p style="font-weight: 600; margin-top: 1rem; margin-bottom: 0.3rem;">State Space</p>
-            <div style="background: #fff3e0; border: 1px dashed #ffb347; border-radius: 6px; padding: 0.75rem; font-size: 0.88rem; color: #888; min-height: 80px;">
-              [ To be filled ]
+            <p style="font-weight: 600; margin-top: 1rem; margin-bottom: 0.3rem;">Action Space (6D) — same as Strategy A</p>
+            <div class="table-container">
+              <table class="table is-bordered is-striped is-hoverable is-fullwidth is-size-7" style="margin-bottom: 0;">
+                <thead>
+                  <tr><th>Dim</th><th>Feature</th><th>Physical bound</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td><code>[0:3]</code></td><td><code>delta_pos</code></td><td>±0.05 m per axis</td></tr>
+                  <tr><td><code>[3:6]</code></td><td><code>delta_euler</code></td><td>±[0.18, 0.22, 0.30] rad (r, p, y)</td></tr>
+                </tbody>
+              </table>
             </div>
-
-            <p style="font-weight: 600; margin-top: 1rem; margin-bottom: 0.3rem;">Action Space</p>
-            <div style="background: #fff3e0; border: 1px dashed #ffb347; border-radius: 6px; padding: 0.75rem; font-size: 0.88rem; color: #888; min-height: 80px;">
-              [ To be filled ]
-            </div>
+            <p style="font-size: 0.8rem; color: #666; margin-top: 0.3rem;">
+              Normalized [−1, +1] → rescaled to physical units.
+              Pose composed via quaternion multiplication; passed to Lula IK solver.
+            </p>
 
           </div>
         </div>
@@ -631,14 +668,14 @@
                 <p class="is-size-7" style="margin: 0; color: #bbb;">[ To be filled ]</p>
               </div>
               <div style="text-align: center; font-size: 1.2rem; color: #555; line-height: 1.5;">↓</div>
-              <div style="border: 2px dashed #ffb347; border-radius: 6px; padding: 0.6rem; text-align: center; background: #fff3e0; min-height: 56px;">
-                <p style="font-weight: 700; font-size: 0.85rem; margin: 0; color: #888;">Policy (random init)</p>
-                <p class="is-size-7" style="margin: 0; color: #bbb;">[ To be filled ]</p>
+              <div style="border: 2px solid #23d160; border-radius: 6px; padding: 0.6rem; text-align: center; background: #effbf4;">
+                <p style="font-weight: 700; font-size: 0.85rem; margin: 0;">Policy MLP (random init)</p>
+                <p class="is-size-7 has-text-grey" style="margin: 0;">PPO actor–critic (256×3)<br>Outputs delta action (6D)</p>
               </div>
               <div style="text-align: center; font-size: 1.2rem; color: #555; line-height: 1.5;">↓</div>
-              <div style="border: 2px dashed #ffb347; border-radius: 6px; padding: 0.6rem; text-align: center; background: #fff3e0; min-height: 56px;">
-                <p style="font-weight: 700; font-size: 0.85rem; margin: 0; color: #888;">Controller</p>
-                <p class="is-size-7" style="margin: 0; color: #bbb;">[ To be filled ]</p>
+              <div style="border: 2px solid #ff3860; border-radius: 6px; padding: 0.6rem; text-align: center; background: #fff0f3;">
+                <p style="font-weight: 700; font-size: 0.85rem; margin: 0;">Pose Controller</p>
+                <p class="is-size-7 has-text-grey" style="margin: 0;">Rescale → pos += Δpos<br>quat ⊗ Δquat → euler<br>→ Lula IK solver</p>
               </div>
               <div style="text-align: center; margin-top: 0.5rem; color: #7a7a7a; font-size: 0.78rem;">
                 ↑ Reward &amp; next state → PPO update ↑
@@ -646,11 +683,16 @@
             </div>
 
             <p class="is-size-7 has-text-grey has-text-centered" style="margin-top: 0.75rem;">
-              Figure 2b: Strategy B data flow.
+              Figure 2b: Strategy B data flow — identical pipeline to Strategy A, but with a randomly-initialized PPO actor.
             </p>
-            <div style="background: #fff3e0; border: 1px dashed #ffb347; border-radius: 6px; padding: 0.75rem; font-size: 0.85rem; color: #888; margin-top: 0.75rem; min-height: 80px;">
-              [ Description to be filled ]
-            </div>
+            <p style="font-size: 0.85rem; margin-top: 0.75rem; color: #444;">
+              The data-flow pipeline is identical to Strategy A: same 10D observation,
+              same 6D residual delta action, same Pose Controller and Lula IK solver.
+              The only difference is the policy is a <strong>randomly-initialized
+              256 → 256 → 256 MLP</strong> trained by PPO with no BC warm start.
+              An optional BC auxiliary loss on CSV demo pairs can be co-applied
+              alongside PPO updates.
+            </p>
           </div>
         </div>
 
@@ -719,16 +761,20 @@
             height: 100%;
           ">
             <p style="font-weight: 700; font-size: 1rem; margin-bottom: 0.6rem; color: #e67e22;">
-              Strategy B — RL from Scratch
+              Strategy B — RL from Scratch (PPO)
             </p>
-            <p style="font-size: 0.85rem; color: #aaa; margin-bottom: 0.5rem;">Steps:</p>
-            <div style="background: #fff3e0; border: 1px dashed #ffb347; border-radius: 6px; padding: 0.75rem; font-size: 0.88rem; color: #888; min-height: 120px; margin-bottom: 0.75rem;">
-              [ To be filled ]
-            </div>
-            <p style="font-size: 0.85rem; color: #aaa; margin-bottom: 0.5rem;">Description:</p>
-            <div style="background: #fff3e0; border: 1px dashed #ffb347; border-radius: 6px; padding: 0.75rem; font-size: 0.88rem; color: #888; min-height: 60px;">
-              [ To be filled ]
-            </div>
+            <ol style="margin-left: 1.1rem; font-size: 0.9rem; color: #363636;">
+              <li>Random policy initialization — <strong>256 → 256 → 256</strong> MLP, <code>log_std_init = −2.0</code>, no BC weights loaded</li>
+              <li>PPO rollout collection: <code>n_steps = 40</code> sub-steps per env × 6 parallel envs</li>
+              <li>PPO update: <code>n_epochs = 10</code> passes, <code>batch_size = 128</code>, <code>ε = 0.2</code></li>
+              <li><em>(Optional)</em> BC auxiliary loss: after each PPO update, <code>n_epochs</code> gradient steps minimizing <code>0.5 × MSE(π_mean(s_demo), a_demo)</code> on CSV demo pairs — set <code>--bc-coef 0</code> for plain PPO</li>
+              <li>Repeat until convergence</li>
+            </ol>
+            <p style="font-size: 0.85rem; color: #7a7a7a; margin-top: 0.75rem;">
+              No BC initialization. The policy explores the action space from random weights.
+              The optional BC auxiliary loss provides a soft demo anchor during training
+              without loading any checkpoint weights.
+            </p>
           </div>
         </div>
 
@@ -784,14 +830,17 @@
             [ Pipeline diagram — to be filled ]
           </div>
           <p class="is-size-6 has-text-grey has-text-centered" style="margin-top: 0.5rem;">
-            Figure 4b: Strategy B pipeline.
+            Figure 4b: Strategy B — random init → PPO rollout → PPO update (+optional BC aux loss) → repeat.
           </p>
           <div style="
             margin-top: 0.6rem; padding: 0.6rem 0.9rem;
             background: #fff3e0; border: 1px dashed #ffb347; border-radius: 6px;
-            min-height: 60px; color: #bbb; font-size: 0.85rem;
+            font-size: 0.85rem; color: #555;
           ">
-            [ Description — to be filled ]
+            No pre-training stage. PPO collects on-policy rollouts from a randomly
+            initialized 256×3 MLP. After each rollout, standard PPO updates are
+            applied; optionally, BC auxiliary steps on CSV demo pairs are co-applied
+            to softly anchor the policy mean toward demonstrated serving poses.
           </div>
         </div>
 
@@ -799,14 +848,17 @@
 
       <div class="content has-text-justified" style="margin-top: 1.25rem;">
         <p>
-          Both strategies are evaluated under identical PPO hyperparameters
-          (<code>lr = 3×10<sup>−4</sup></code>, <code>γ = 0.99</code>,
+          Both strategies use the same PPO hyperparameters:
+          <code>lr = 3×10<sup>−4</sup></code>, <code>γ = 0.99</code>,
           <code>λ = 0.95</code>, <code>ε = 0.2</code>,
-          <code>n_steps = 40</code>, <code>batch_size = 128</code>).
-          The key experimental question is whether supervised pre-training provides a useful
-          initialization that PPO can build upon, or whether it introduces instability —
-          such as overly conservative behaviour near the BC manifold — that prevents further
-          improvement. The results of this comparison are presented in the following section.
+          <code>n_steps = 40</code>, <code>n_epochs = 10</code>,
+          <code>batch_size = 128</code>, <code>log_std_init = −2.0</code>.
+          They differ in network architecture (A: 160→300→300→80 from BC; B: 256→256→256 random)
+          and initialization strategy (A: BC warm start + critic freeze; B: fully random,
+          optional BC auxiliary loss).
+          The key experimental question is whether BC initialization provides a useful
+          warm start that PPO can build upon, or whether it introduces instability that
+          prevents further improvement. The results of this comparison are presented in the following section.
         </p>
       </div>
 
