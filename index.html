@@ -187,18 +187,26 @@
           <h2 class="title is-3">Abstract</h2>
           <div class="content has-text-justified">
             <p>
-              This project investigates the application of reinforcement learning (RL) to the problem
-              of generating table tennis robot serving motions in a physics-based simulation environment.
-              Rather than relying on hand-crafted trajectories or motion capture data, we formulate the
-              serving task as a sequential decision-making problem in which an agent learns a policy that
-              maps observed robot and ball states to joint-space actions. The agent is trained using
-              Proximal Policy Optimization (PPO), with a reward function designed to encourage consistent
-              ball contact, appropriate launch angle, and landing accuracy on the target side of the table.
-              We describe the environment setup, state representation, action space, and reward shaping
-              choices in detail. While the project remains exploratory in nature and does not claim to
-              achieve production-level performance, the training observations suggest that the learned
-              policy is capable of producing structurally consistent serving motions across episodes,
-              providing a foundation for further investigation into RL-based robot sports control.
+              This project investigates the use of reinforcement learning (RL) for table tennis
+              robot serving in a physics-based simulation environment built with NVIDIA Isaac Sim.
+              We formulate the serving task as a sequential decision-making problem in which a
+              UR10 robot arm learns a policy that maps observed joint and ball states to
+              joint-space actions, trained with Proximal Policy Optimization (PPO) and a
+              shaped reward function covering ball contact, launch trajectory, and landing accuracy.
+            </p>
+            <p>
+              A central aspect of the project is the comparison of two training strategies:
+              (1) <strong>RL from Scratch</strong>, where the policy is initialized randomly
+              and trained entirely by PPO, and
+              (2) <strong>RL after Supervised Learning</strong>, where a Behavior Cloning policy
+              pre-trained on teleoperation demonstration data from SEAL (Guo et al., ICRA 2025)
+              is used to initialize the PPO actor before fine-tuning.
+              Training observations indicate that RL from Scratch achieves modest but stable
+              convergence, while RL after Supervised Learning becomes unstable after the
+              pre-trained weights are unfrozen, failing to improve beyond the initial
+              supervised baseline. These findings suggest that naive PPO fine-tuning on top
+              of a BC-initialized policy does not reliably outperform training from scratch
+              under the conditions studied.
             </p>
           </div>
         </div>
@@ -271,9 +279,10 @@
           </li>
           <li>
             <strong>Policy Action.</strong>&nbsp;
-            A neural network policy maps the observed state to a joint-space action.
-            The output is clipped to safe operating limits before being sent to the
-            low-level controller.
+            A neural network policy maps the observed state to a continuous
+            joint-space action, which is executed by the low-level controller.
+            Details of the action representation are described in the
+            Reinforcement Learning Framework section.
           </li>
           <li>
             <strong>Reward Calculation.</strong>&nbsp;
@@ -318,8 +327,8 @@
           First, we adapt SEAL's task definition — a UR10 arm serving a ball to the
           opposite half of an ITTF-standard table — and
           <strong>deploy this task inside NVIDIA Isaac Sim</strong> to verify that a
-          physics-based simulation environment can faithfully reproduce the serving
-          scenario. This simulation deployment is one of our own contributions.
+          physics-based simulation environment can support the serving scenario as a
+          training platform. This simulation deployment is one of our own contributions.
           Second, the end-effector teleoperation trajectories from SEAL serve as
           demonstration data for the Behavior Cloning pre-training stage in our
           <em>Strategy B (RL after Supervised Learning)</em>.
@@ -398,24 +407,22 @@
 
         <h3 class="title is-5" style="margin-top: 1.2rem; margin-bottom: 0.4rem;">State Space</h3>
         <p>
-          At each control step, the agent observes a 10-dimensional state vector:
+          At each control step, the agent observes a 10-dimensional state vector composed of:
         </p>
         <ul>
-          <li><strong>Joint angles</strong> of the UR10 arm (6 DOF)</li>
-          <li><strong>Ball position</strong> in the table frame (x, y, z)</li>
-          <li><strong>Ball velocity</strong> (magnitude or directional component)</li>
+          <li><strong>UR10 joint angles</strong> — 6D (one per joint)</li>
+          <li><strong>Ball position</strong> in the table frame — 3D (x, y, z)</li>
+          <li><strong>Ball velocity magnitude</strong> — 1D</li>
         </ul>
         <p>
-          All observations are normalized to zero mean and unit variance before being fed into
-          the policy network to improve training stability.
+          All observations are normalized before being fed into the policy network.
         </p>
 
         <h3 class="title is-5" style="margin-top: 1.2rem; margin-bottom: 0.4rem;">Action Space</h3>
         <p>
-          The policy outputs a 6-dimensional continuous action vector corresponding to
-          target joint velocities (or incremental joint positions) for each of the UR10's joints.
-          Actions are clipped to safe operating ranges before being passed to the low-level
-          joint controller in Isaac Sim.
+          The policy outputs a 6-dimensional continuous action vector of target joint velocities
+          for each UR10 joint. Actions are clipped to safe operating ranges by the low-level
+          controller before execution.
         </p>
 
         <h3 class="title is-5" style="margin-top: 1.2rem; margin-bottom: 0.4rem;">Reward Function</h3>
@@ -489,7 +496,7 @@
             background: #eff5fb;
           ">
             <p style="font-weight: 700; margin-bottom: 0.4rem;">Observation</p>
-            <p class="is-size-7 has-text-grey">Joint angles (6D)<br>Ball pos &amp; vel (4D)</p>
+            <p class="is-size-7 has-text-grey">Joint angles (6D)<br>Ball pos (3D) + vel (1D)</p>
           </div>
 
           <!-- Arrow right -->
@@ -623,8 +630,9 @@
                style="max-width: 420px; margin: 0 auto; display: block; border-radius: 4px;">
         </figure>
         <p class="is-size-6 has-text-grey" style="margin-top: 0.5rem;">
-          Figure 3: Detailed pipeline for Strategy B — Behavior Cloning pre-training
-          followed by PPO fine-tuning in Isaac Sim.
+          Figure 4: Detailed pipeline for Strategy B — Behavior Cloning pre-training
+          on SEAL teleoperation data, weight transfer to the PPO actor, and
+          PPO fine-tuning in Isaac Sim.
         </p>
       </div>
 
