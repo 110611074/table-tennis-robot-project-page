@@ -307,21 +307,27 @@
           Robot Serve</strong> (Guo et al., ICRA 2025 ·
           <a href="https://ieeexplore.ieee.org/document/11128201" target="_blank">IEEE Xplore</a> ·
           <a href="https://www.youtube.com/watch?v=iSis7VrlxJc" target="_blank">video</a>).
-          SEAL is an independent prior work, not a contribution of this project.
-          We refer to it here because it addresses a closely related task — learning a
-          table tennis serving policy in an Isaac-based simulation — and its published
-          results support the feasibility of using Isaac Sim for this class of robotic
-          table tennis experiments.
+          SEAL is an independent prior work developed by a Japanese research laboratory.
+          It proposes a sample-efficient method for training a real-world table tennis
+          serving robot, using physical hardware and real ball-flight trajectories.
+          SEAL is <em>not</em> a simulation-based method; all of its experiments are
+          conducted on a real robot in the real world.
         </p>
         <p>
-          Specifically, SEAL's use of an Isaac-based physics environment for modeling
-          ball–paddle contact and flight trajectories informed our choice of Isaac Sim
-          as the simulator for our own RL experiments. In addition, the teleoperation
-          trajectories collected in SEAL serve as demonstration data for the
-          Behavior Cloning pre-training stage of our
-          <em>RL after Supervised Learning</em> condition (Strategy B).
-          The videos and figure below are taken from SEAL's original results and are
-          included solely to provide context.
+          Our project takes SEAL as a starting point in two ways.
+          First, we adapt SEAL's task definition — a UR10 arm serving a ball to the
+          opposite half of an ITTF-standard table — and
+          <strong>deploy this task inside NVIDIA Isaac Sim</strong> to verify that a
+          physics-based simulation environment can faithfully reproduce the serving
+          scenario. This simulation deployment is one of our own contributions.
+          Second, the end-effector teleoperation trajectories from SEAL serve as
+          demonstration data for the Behavior Cloning pre-training stage in our
+          <em>Strategy B (RL after Supervised Learning)</em>.
+        </p>
+        <p>
+          The videos and figure below are taken directly from SEAL's original
+          real-world results and are included here solely as reference material.
+          They are not results produced by this project.
         </p>
       </div>
 
@@ -334,8 +340,8 @@
             Your browser does not support the video tag.
           </video>
           <p class="is-size-6 has-text-grey" style="margin-top: 0.4rem;">
-            SEAL's learned serving policy rollout in Isaac Sim
-            (Guo et al., ICRA 2025). <em>This is not our result.</em>
+            SEAL's learned serving policy executed on a <strong>real robot</strong>
+            (Guo et al., ICRA 2025). Not a result of this project.
           </p>
         </div>
         <div class="column is-half has-text-centered">
@@ -345,8 +351,9 @@
             Your browser does not support the video tag.
           </video>
           <p class="is-size-6 has-text-grey" style="margin-top: 0.4rem;">
-            End-effector teleoperation used for demonstration data collection in SEAL.
-            These trajectories are reused as Behavior Cloning training data in our Strategy B.
+            End-effector teleoperation for demonstration data collection in SEAL
+            (real-world hardware). These trajectories are reused as Behavior Cloning
+            training data in our Strategy B.
           </p>
         </div>
       </div>
@@ -355,15 +362,15 @@
       <div class="has-text-centered" style="margin-top: 1.5rem;">
         <figure class="image">
           <img src="static/images/landing_distribution_6D.png"
-               alt="Ball landing distribution from SEAL's 6-DOF serving experiments, showing target landing positions on the table (Guo et al., ICRA 2025)"
+               alt="Ball landing distribution from SEAL's real-world 6-DOF serving experiments (Guo et al., ICRA 2025)"
                loading="lazy"
                style="max-width: 680px; margin: 0 auto; display: block; border-radius: 4px;">
         </figure>
         <p class="is-size-6 has-text-grey" style="margin-top: 0.5rem;">
-          Ball landing distribution from SEAL's 6-DOF serving experiments
+          Ball landing distribution from SEAL's real-world 6-DOF serving experiments
           (reproduced from
           <a href="https://ieeexplore.ieee.org/document/11128201" target="_blank">Guo et al., ICRA 2025</a>).
-          Shown here as a reference for the task difficulty and target landing zone.
+          Included as a reference for the serving task definition and target landing zone.
         </p>
       </div>
 
