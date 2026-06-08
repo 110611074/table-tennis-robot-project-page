@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   <!-- Primary Meta Tags -->
-  <meta name="title" content="A Reinforcement Learning Approach for Table Tennis Robot Serve - Ying Hsien Cheng, Po-Chuan Chiu, Ting-Yu Song">
+  <meta name="title" content="A Reinforcement Learning Approach for Table Tennis Robot Serve - Li-Yi Chang, Ting-Yu Song, Po-Chuan Chiou, Ying-Hsien Cheng, Hung-Yu Chen">
   <meta name="description" content="A Reinforcement Learning final project that investigates simulation-based policy learning for table tennis robot serving motion generation using PPO.">
   <meta name="keywords" content="reinforcement learning, table tennis robot, robot control, policy learning, PPO, simulation, motion generation">
-  <meta name="author" content="Ying-Hsien Cheng, Po-Chuan Chiou, Ting-Yu Song">
+  <meta name="author" content="Li-Yi Chang, Ting-Yu Song, Po-Chuan Chiou, Ying-Hsien Cheng, Hung-Yu Chen">
   <meta name="robots" content="index, follow">
   <meta name="language" content="English">
 
@@ -78,9 +78,11 @@
     "headline": "A Reinforcement Learning Approach for Table Tennis Robot Serve",
     "description": "A Reinforcement Learning final project that investigates simulation-based policy learning for table tennis robot serving motion generation.",
     "author": [
-      {"@type": "Person", "name": "Ying Hsien Cheng", "affiliation": {"@type": "Organization", "name": "National Yang Ming Chiao Tung University"}},
-      {"@type": "Person", "name": "Po Chuan Chiou",    "affiliation": {"@type": "Organization", "name": "National Yang Ming Chiao Tung University"}},
-      {"@type": "Person", "name": "Ting Yu Song",     "affiliation": {"@type": "Organization", "name": "National Yang Ming Chiao Tung University"}}
+      {"@type": "Person", "name": "Li-Yi Chang",       "affiliation": {"@type": "Organization", "name": "National Yang Ming Chiao Tung University"}},
+      {"@type": "Person", "name": "Ting-Yu Song",      "affiliation": {"@type": "Organization", "name": "National Yang Ming Chiao Tung University"}},
+      {"@type": "Person", "name": "Po-Chuan Chiou",    "affiliation": {"@type": "Organization", "name": "National Yang Ming Chiao Tung University"}},
+      {"@type": "Person", "name": "Ying-Hsien Cheng",  "affiliation": {"@type": "Organization", "name": "National Yang Ming Chiao Tung University"}},
+      {"@type": "Person", "name": "Hung-Yu Chen",      "affiliation": {"@type": "Organization", "name": "National Yang Ming Chiao Tung University"}}
     ],
     "datePublished": "2026-01-01",
     "publisher": {"@type": "Organization", "name": "National Yang Ming Chiao Tung University"},
@@ -112,9 +114,11 @@
             </h1>
 
             <div class="is-size-5 publication-authors">
-              <span class="author-block">Ying-Hsien Cheng,&nbsp;</span>
+              <span class="author-block">Li-Yi Chang,&nbsp;</span>
+              <span class="author-block">Ting-Yu Song,&nbsp;</span>
               <span class="author-block">Po-Chuan Chiou,&nbsp;</span>
-              <span class="author-block">Ting-Yu Song</span>
+              <span class="author-block">Ying-Hsien Cheng,&nbsp;</span>
+              <span class="author-block">Hung-Yu Chen</span>
             </div>
 
             <div class="is-size-5 publication-authors" style="margin-top: 0.5rem;">
@@ -246,6 +250,75 @@
     </div>
   </section>
   <!-- End Method Overview -->
+
+
+  <!-- ===== SEAL Reference ===== -->
+  <section class="section hero is-light">
+    <div class="container is-max-desktop">
+      <h2 class="title is-3 has-text-centered">
+        Reference: SEAL — Sample-Efficient Adjustment-Learning
+      </h2>
+      <div class="content has-text-justified">
+        <p>
+          As a key reference for this project, we study
+          <strong>SEAL (Sample-Efficient Adjustment-Learning Method for Table Tennis Robot Serve)</strong>,
+          presented at ICRA 2025
+          (<a href="https://ieeexplore.ieee.org/document/11128201" target="_blank">IEEE Xplore</a> ·
+          <a href="https://www.youtube.com/watch?v=iSis7VrlxJc" target="_blank">Video overview</a>).
+          SEAL demonstrates a practical pipeline for learning table tennis serving policies in
+          simulation with high sample efficiency, leveraging an Isaac-based physics environment
+          that accurately models ball–paddle contact and flight trajectories.
+        </p>
+        <p>
+          A key motivation for consulting SEAL is to <strong>verify that the Isaac simulation
+          environment can successfully run a table tennis serving task</strong>. The results from SEAL
+          confirm that Isaac provides sufficiently realistic dynamics for training serving
+          policies, which informs the choice of simulator for our own RL experiments.
+        </p>
+      </div>
+
+      <!-- Videos side by side -->
+      <div class="columns is-centered" style="margin-top: 1.5rem;">
+        <div class="column is-half has-text-centered">
+          <video controls muted loop preload="metadata"
+                 style="width: 100%; border-radius: 6px;">
+            <source src="static/SEAL/seal.mp4" type="video/mp4">
+            Your browser does not support the video tag.
+          </video>
+          <p class="is-size-6 has-text-grey" style="margin-top: 0.4rem;">
+            SEAL: learned serving policy rollout.
+          </p>
+        </div>
+        <div class="column is-half has-text-centered">
+          <video controls muted loop preload="metadata"
+                 style="width: 100%; border-radius: 6px;">
+            <source src="static/SEAL/ee_teleop.mp4" type="video/mp4">
+            Your browser does not support the video tag.
+          </video>
+          <p class="is-size-6 has-text-grey" style="margin-top: 0.4rem;">
+            End-effector teleoperation used for data collection in SEAL.
+          </p>
+        </div>
+      </div>
+
+      <!-- Landing distribution figure -->
+      <div class="has-text-centered" style="margin-top: 1.5rem;">
+        <figure class="image">
+          <img src="static/SEAL/landing_distribution_6D.png"
+               alt="Landing distribution of the SEAL method showing ball landing positions in 6-DOF serving experiments"
+               loading="lazy"
+               style="max-width: 680px; margin: 0 auto; display: block; border-radius: 4px;">
+        </figure>
+        <p class="is-size-6 has-text-grey" style="margin-top: 0.5rem;">
+          Figure: Ball landing distribution from SEAL's 6-DOF serving experiments
+          (reproduced from
+          <a href="https://ieeexplore.ieee.org/document/11128201" target="_blank">Guo et al., ICRA 2025</a>).
+        </p>
+      </div>
+
+    </div>
+  </section>
+  <!-- End SEAL Reference -->
 
 
   <!-- ===== Reinforcement Learning Framework ===== -->
@@ -494,7 +567,7 @@
       </div>
       <pre id="bibtex-code"><code>@misc{cheng2026tabletennis,
   title   = {A Reinforcement Learning Approach for Table Tennis Robot Serve},
-  author  = {Ying-Hsien Cheng and Po-Chuan Chiou and Ting-Yu Song},
+  author  = {Li-Yi Chang and Ting-Yu Song and Po-Chuan Chiou and Ying-Hsien Cheng and Hung-Yu Chen},
   year    = {2026},
   note    = {Reinforcement Learning Final Project, National Yang Ming Chiao Tung University},
   url     = {https://github.com/110611074/table-tennis-robot-project-page}
