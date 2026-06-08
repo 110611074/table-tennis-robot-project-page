@@ -815,6 +815,87 @@
   <!-- End Training Pipeline -->
 
 
+  <!-- ===== Testing Procedure ===== -->
+  <section class="section">
+    <div class="container is-max-desktop">
+      <h2 class="title is-3 has-text-centered">Testing Procedure</h2>
+      <div class="content has-text-justified">
+        <p>
+          After training, each policy is evaluated by serving the ball toward a
+          designated target landing point \(P_{\text{tar}}\). The two strategies differ
+          in <strong>how the state is updated between successive attempts</strong>.
+        </p>
+      </div>
+
+      <div class="columns is-desktop" style="margin-top: 1rem; align-items: flex-start;">
+
+        <!-- ── Strategy A ── -->
+        <div class="column">
+          <div style="border: 2px solid #3273dc; border-radius: 10px; padding: 1.3rem 1.1rem; background: #f5f8ff; height: 100%;">
+            <p style="font-weight: 700; font-size: 0.95rem; color: #2563eb; margin-bottom: 0.8rem; border-bottom: 1px solid #c5d8f8; padding-bottom: 0.5rem;">
+              Strategy A — Iterative Error Update (SEAL-style)
+            </p>
+            <p style="font-size: 0.9rem; color: #363636;">
+              The <strong>reference robot state \(S_0\)</strong> stays fixed throughout
+              all attempts. Only the <strong>error term \(\Delta\)</strong> is updated
+              after each serve based on the observed landing deviation:
+            </p>
+            <!-- SEAL formula image -->
+            <div class="has-text-centered" style="margin: 0.9rem 0;">
+              <img src="static/images/seal_formula.png"
+                   alt="SEAL update formula: Δx_{i+1} = Δx_i + (x_target - x_i), Δy_{i+1} = Δy_i + (y_target - y_i)"
+                   style="max-width: 320px; width: 100%;">
+            </div>
+            <p style="font-size: 0.88rem; color: #555;">
+              Each iteration the network receives
+              \((S_0,\ P_0,\ \Delta_{i})\) and outputs \(\Delta S\), producing
+              the next robot state \(S_0 + \Delta S\). The policy converges toward
+              \(P_{\text{tar}}\) without ever changing the reference pose.
+            </p>
+            <!-- Testing A diagram -->
+            <div class="has-text-centered" style="margin-top: 1rem;">
+              <img src="static/images/testing_a.png"
+                   alt="Strategy A testing: fixed reference S_0 and P_0, iterative convergence P_0→P_1→P_2→P_3→P_tar"
+                   style="max-width: 100%; border-radius: 4px;">
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Strategy B ── -->
+        <div class="column">
+          <div style="border: 2px dashed #ff9f43; border-radius: 10px; padding: 1.3rem 1.1rem; background: #fffbf5; height: 100%;">
+            <p style="font-weight: 700; font-size: 0.95rem; color: #e67e22; margin-bottom: 0.8rem; border-bottom: 1px dashed #ffd591; padding-bottom: 0.5rem;">
+              Strategy B — Rolling State Update
+            </p>
+            <p style="font-size: 0.9rem; color: #363636;">
+              After each serve, the <strong>actual landing position becomes the new
+              reference state</strong> for the next attempt. Both the robot state
+              \(S_t\) and landing point \(P_t\) roll forward:
+            </p>
+            <div style="background: #fffbf0; border: 1px solid #ffe0a0; border-radius: 6px; padding: 0.7rem 1rem; margin: 0.9rem 0; font-size: 0.88rem; color: #555;">
+              State: \((S_t,\ P_t,\ d_t)\) &nbsp;→&nbsp;
+              Action: \(S_{t+1} - S_t\) &nbsp;→&nbsp;
+              Next state: \((S_{t+1},\ P_{t+1},\ d_{t+1})\)
+            </div>
+            <p style="font-size: 0.88rem; color: #555;">
+              The distance \(d_t = \|P_t - P_{\text{tar}}\|\) shrinks as the policy
+              steers successive landing positions toward the target.
+            </p>
+            <!-- Testing B diagram -->
+            <div class="has-text-centered" style="margin-top: 1rem;">
+              <img src="static/images/testing_b.png"
+                   alt="Strategy B testing: rolling state update S_t → S_{t+1}, landing P_t → P_{t+1} → P_tar"
+                   style="max-width: 100%; border-radius: 4px;">
+            </div>
+          </div>
+        </div>
+
+      </div><!-- end columns -->
+    </div>
+  </section>
+  <!-- End Testing Procedure -->
+
+
   <!-- ===== Results ===== -->
   <section class="section">
     <div class="container is-max-desktop">
