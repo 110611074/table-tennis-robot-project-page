@@ -658,38 +658,43 @@
 
       <div class="content has-text-justified" style="margin-bottom: 1.5rem;">
         <p>
-          We compare <strong>two training strategies</strong> that share the same PPO loop,
-          state space, action space, and reward function, but differ in policy initialization.
-          Both strategies are illustrated in the figure below.
+          To investigate the role of prior knowledge in RL-based serving, we design and compare
+          <strong>two training strategies</strong> that share the same PPO loop, state space,
+          action space, and reward function, but differ fundamentally in policy initialization,
+          as illustrated in Figure 2.
         </p>
         <ul>
           <li>
             <strong style="color:#2563eb;">Strategy A — RL after Supervised Learning (BC → PPO):</strong>
-            The <em>full pipeline</em> — demonstration data from SEAL teleoperation is used to
-            pre-train a Behavior Cloning policy. The BC weights are then transferred to the PPO
-            actor. The actor is frozen while the critic is warmed up, then both networks are
-            fine-tuned jointly with PPO. BC also serves as a regularization term throughout
-            PPO training to constrain policy updates.
+            Follows the <em>complete pipeline</em> shown in the figure.
+            Demonstration data (SEAL teleoperation trajectories) is used to pre-train a
+            Behavior Cloning (BC) policy. The BC weights are transferred to initialize the
+            PPO actor; the critic is randomly initialized and trained alone during a brief
+            warm-up (PPO Policy Evaluation stage). Finally, both networks are jointly
+            fine-tuned by PPO, with BC continuing as a regularization term to constrain
+            policy updates. New on-policy rollouts generated during PPO training
+            serve as a byproduct to supplement the original demonstration data.
           </li>
-          <li style="margin-top: 0.6rem;">
+          <li style="margin-top: 0.75rem;">
             <strong style="color:#e67e22;">Strategy B — RL from Scratch (PPO):</strong>
-            Only the <em>two black-bordered boxes</em> at the bottom of the diagram —
-            PPO Policy Evaluation and PPO Training until Convergence — starting from a
-            randomly initialized policy with no BC pre-training or weight transfer.
+            Corresponds to the <em>two black-bordered boxes</em> only —
+            PPO Policy Evaluation and PPO Training until Convergence.
+            The policy starts from random initialization with no BC pre-training,
+            no weight transfer, and no BC regularization.
           </li>
         </ul>
       </div>
 
-      <figure class="image" style="max-width: 560px; margin: 0 auto;">
-        <img src="static/images/training_pipeline_fig2.png"
-             alt="Training pipeline: Strategy A uses the full diagram; Strategy B uses only the two black-bordered PPO boxes"
+      <figure class="image" style="max-width: 540px; margin: 0 auto;">
+        <img src="static/images/training_pipeline_a.png"
+             alt="Figure 2: PPO training pipeline. Strategy A uses the complete flow; Strategy B uses only the two black-bordered PPO boxes from random initialization."
              loading="lazy"
              style="width: 100%; border-radius: 8px; box-shadow: 0 2px 14px rgba(0,0,0,0.12);">
       </figure>
       <p class="is-size-6 has-text-grey has-text-centered" style="margin-top: 0.75rem;">
-        Figure 2: PPO training pipeline.
+        Figure 2: The PPO training pipeline.
         <strong style="color:#2563eb;">Strategy A</strong> follows the complete flow (all boxes).
-        <strong style="color:#e67e22;">Strategy B</strong> corresponds to the two black-bordered boxes only, starting from random initialization.
+        <strong style="color:#e67e22;">Strategy B</strong> uses only the two black-bordered boxes, starting from random initialization.
       </p>
 
     </div>
