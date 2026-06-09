@@ -515,7 +515,7 @@
         <div class="content has-text-justified">
           <p>
             Each episode consists of up to <strong>5 sub-steps</strong> targeting the same landing
-            point. The reward at each sub-step is \(r = r_{\text{status}} + r_{\text{action}}\):
+            point. The reward at each sub-step is \(r_{\text{status}}\):
           </p>
           <ul style="margin-top: 0.4rem;">
             <li>
@@ -524,11 +524,7 @@
             </li>
             <li>
               <strong>Illegal penalty (sparse):</strong>
-              \(r_{\text{status}} = -5.0 \times f\) — \(f{=}1.2\) for miss, \(f{=}0.05\) for insufficient bounces / indeterminate
-            </li>
-            <li>
-              <strong>Action regularization (optional):</strong>
-              \(r_{\text{action}} = -w \cdot \lVert a \rVert^2\)
+              \(r_{\text{status}} = \begin{cases} -6 & \text{if MISS} \\ -0.25 & \text{if insufficient bounces} \end{cases}\)
             </li>
           </ul>
         </div>
