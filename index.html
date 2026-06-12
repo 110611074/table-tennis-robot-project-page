@@ -137,7 +137,7 @@
               <div class="publication-links">
                 <!-- Code button only -->
                 <span class="link-block">
-                  <a href="https://github.com/110611074/table-tennis-robot-project-page"
+                  <a href="https://github.com/Ethan01478/DLP-RL-Final-Project/tree/main"
                      target="_blank"
                      class="external-link button is-normal is-rounded is-dark">
                     <span class="icon">
@@ -541,8 +541,9 @@
       <h2 class="title is-3 has-text-centered">System Architecture</h2>
       <div class="content has-text-justified">
         <p>
-          Both strategies share the same Isaac Sim simulation environment but differ in
-          their observation space, action representation, and low-level controller.
+          Both strategies share the same Isaac Sim simulation environment, observation space,
+          action representation, reward function, and low-level controller.
+          They differ only in <strong>how the policy (actor) is initialized</strong>.
         </p>
       </div>
 
@@ -637,9 +638,8 @@
               The data-flow pipeline is identical to Strategy A: same 10D observation,
               same 6D residual delta action, same Pose Controller and Lula IK solver.
               The only difference is the policy is a <strong>randomly-initialized
-              256 → 256 → 256 MLP</strong> trained by PPO with no BC warm start.
-              An optional BC auxiliary loss on CSV demo pairs can be co-applied
-              alongside PPO updates.
+              256 → 256 → 256 MLP</strong> trained purely by PPO rewards —
+              no BC pre-training, no weight transfer, no BC regularization.
             </p>
           </div>
         </div>
@@ -942,7 +942,7 @@
   author  = {Li-Yi Chang and Ting-Yu Song and Po-Chuan Chiou and Ying-Hsien Cheng and Hung-Yu Chen},
   year    = {2026},
   note    = {Reinforcement Learning Final Project, National Yang Ming Chiao Tung University},
-  url     = {https://github.com/110611074/table-tennis-robot-project-page}
+  url     = {https://github.com/Ethan01478/DLP-RL-Final-Project/tree/main}
 }</code></pre>
     </div>
   </section>
